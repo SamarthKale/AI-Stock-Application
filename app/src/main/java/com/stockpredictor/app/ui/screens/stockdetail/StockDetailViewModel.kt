@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.CachedPredictionDao
 import com.stockpredictor.app.data.local.dao.WatchlistDao
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.mock.MockPredictions
 import com.stockpredictor.app.mock.MockStocks
 import com.stockpredictor.app.model.Prediction
@@ -40,6 +42,8 @@ class StockDetailViewModel(
 ) : AndroidViewModel(application) {
     private val watchlistDao = WatchlistDao(application)
     private val cachedPredictionDao = CachedPredictionDao(application)
+    private val syncRepository = FirestoreSyncRepository.getInstance(application)
+    private val authRepository = FirebaseAuthRepository()
 
     private val stock = MockStocks.findBySymbol(symbol)
     private val _prediction = MutableStateFlow(MockPredictions.forSymbol(symbol))
@@ -94,10 +98,11 @@ class StockDetailViewModel(
 
     fun toggleWatchlist() {
         viewModelScope.launch {
+            val uid = authRepository.currentUser?.uid
             if (_isInWatchlist.value) {
-                watchlistDao.delete(symbol)
+                syncRepository.removeFromWatchlist(uid, symbol)
             } else {
-                watchlistDao.insert(symbol)
+                syncRepository.addToWatchlist(uid, symbol)
             }
             _isInWatchlist.value = watchlistDao.isWatchlisted(symbol)
         }

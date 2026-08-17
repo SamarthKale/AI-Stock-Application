@@ -1,8 +1,10 @@
 package com.stockpredictor.app.ui.screens.auth
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.toAuthErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +18,10 @@ data class ForgotPasswordFormState(
     val isSubmitted: Boolean = false,
 )
 
-class ForgotPasswordViewModel : ViewModel() {
+/** Sends a real Firebase Auth password-reset email (Phase 2.5) — the screen composable is unchanged. */
+class ForgotPasswordViewModel(application: Application) : AndroidViewModel(application) {
+    private val authRepository = FirebaseAuthRepository()
+
     private val _formState = MutableStateFlow(ForgotPasswordFormState())
     val formState: StateFlow<ForgotPasswordFormState> = _formState.asStateFlow()
 
@@ -26,15 +31,21 @@ class ForgotPasswordViewModel : ViewModel() {
 
     fun submit() {
         val current = _formState.value
-        val emailError = validateEmail(current.email)
-        if (emailError != null) {
-            _formState.update { it.copy(emailError = emailError) }
+        if (current.email.isBlank()) {
+            _formState.update { it.copy(emailError = "Email is required") }
             return
         }
         viewModelScope.launch {
             _formState.update { it.copy(isSubmitting = true) }
-            delay(600)
-            _formState.update { it.copy(isSubmitting = false, isSubmitted = true) }
+            authRepository.sendPasswordResetEmail(current.email)
+                .onSuccess {
+                    _formState.update { it.copy(isSubmitting = false, isSubmitted = true) }
+                }
+                .onFailure { error ->
+                    _formState.update {
+                        it.copy(isSubmitting = false, emailError = error.toAuthErrorMessage())
+                    }
+                }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +39,10 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.logoutEvent.collect { onLogout() }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
         ClayAppBar(title = "Settings")
@@ -80,7 +85,12 @@ fun SettingsScreen(
                 }
             }
             item {
-                ClayButton(text = "Log Out", onClick = onLogout, variant = ClayButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())
+                ClayButton(
+                    text = "Log Out",
+                    onClick = viewModel::logout,
+                    variant = ClayButtonVariant.Secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }

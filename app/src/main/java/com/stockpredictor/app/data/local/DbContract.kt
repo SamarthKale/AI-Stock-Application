@@ -13,6 +13,9 @@ object DbContract {
         const val COL_SYMBOL = "symbol"
         const val COL_ADDED_AT = "added_at"
         const val COL_SORT_ORDER = "sort_order"
+        // Added in Phase 2.5: compared against Firestore's server timestamp for
+        // last-write-wins conflict resolution — see FirestoreSyncRepository.
+        const val COL_UPDATED_AT = "updated_at"
     }
 
     object RecentSearchTable {

@@ -1,11 +1,15 @@
 package com.stockpredictor.app.navigation
 
+import android.app.Application
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -13,6 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.ui.components.ClayBottomNav
 import com.stockpredictor.app.ui.screens.auth.ForgotPasswordScreen
 import com.stockpredictor.app.ui.screens.auth.LoginScreen
@@ -32,6 +38,19 @@ import com.stockpredictor.app.ui.theme.ClayColor
 fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val context = LocalContext.current
+
+    // A session persists across cold starts (Firebase Auth's own local storage), so a
+    // returning signed-in user skips Onboarding/Login straight to Home. Computed once at
+    // first composition — this is a startup routing decision, not a reactive session watch.
+    val startDestination = remember {
+        if (FirebaseAuthRepository().currentUser != null) Destinations.Home.route else Destinations.Onboarding.route
+    }
+    LaunchedEffect(Unit) {
+        FirebaseAuthRepository().currentUser?.uid?.let { uid ->
+            FirestoreSyncRepository.getInstance(context.applicationContext as Application).startListening(uid)
+        }
+    }
 
     Scaffold(
         containerColor = ClayColor.Background,
@@ -58,7 +77,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         // default OnBackPressedDispatcher and exits the app. No custom BackHandler needed.
         NavHost(
             navController = navController,
-            startDestination = Destinations.Onboarding.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(Destinations.Onboarding.route) {

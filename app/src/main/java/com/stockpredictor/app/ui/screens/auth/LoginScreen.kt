@@ -1,5 +1,9 @@
 package com.stockpredictor.app.ui.screens.auth
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,9 +39,18 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
 ) {
     val formState by viewModel.formState.collectAsStateWithLifecycle()
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* no-op: alerts simply won't display if the user declines */ }
 
     LaunchedEffect(Unit) {
-        viewModel.loginEvent.collect { onLoginSuccess() }
+        viewModel.loginEvent.collect {
+            // Requested here — right after first successful auth, with context, not on cold start.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            onLoginSuccess()
+        }
     }
 
     Column(

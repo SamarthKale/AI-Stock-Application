@@ -4,11 +4,16 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.SettingsDao
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.debug.DebugStateController
 import com.stockpredictor.app.debug.DebugUiMode
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,7 +35,15 @@ private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
  */
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = SettingsDao(application)
+    private val authRepository = FirebaseAuthRepository()
+    private val syncRepository = FirestoreSyncRepository.getInstance(application)
     private val _notificationsEnabled = MutableStateFlow(true)
+
+    private val _logoutEvent = MutableSharedFlow<Unit>()
+    /** Emitted once sign-out (listener stop + local cache clear + Firebase sign-out) has
+     *  fully completed — the screen navigates on this, not on the button click itself, so
+     *  navigation can never race ahead of the cache clear. */
+    val logoutEvent: SharedFlow<Unit> = _logoutEvent.asSharedFlow()
 
     val uiState: StateFlow<SettingsUiData> = combine(
         _notificationsEnabled, DebugStateController.mode,
@@ -51,5 +64,21 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setDebugMode(mode: DebugUiMode) {
         DebugStateController.setMode(mode)
+    }
+
+    /**
+     * Stops the Firestore listener and wipes the local watchlist cache before signing out —
+     * in that order — so a different account signing in on this device never inherits either
+     * the previous user's listener or their cached local rows (see FirestoreSyncRepository).
+     * Runs as a suspend sequence and only signals [logoutEvent] once every step has finished,
+     * so the screen never navigates to Login while the clear is still in flight.
+     */
+    fun logout() {
+        viewModelScope.launch {
+            syncRepository.stopListening()
+            syncRepository.clearLocalCache()
+            authRepository.signOut()
+            _logoutEvent.emit(Unit)
+        }
     }
 }

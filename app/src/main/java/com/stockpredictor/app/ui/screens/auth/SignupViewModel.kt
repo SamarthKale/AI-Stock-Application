@@ -1,8 +1,13 @@
 package com.stockpredictor.app.ui.screens.auth
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.stockpredictor.app.data.remote.firebase.FcmTokenManager
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
+import com.stockpredictor.app.data.remote.firebase.isAuthEmailFieldError
+import com.stockpredictor.app.data.remote.firebase.toAuthErrorMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -24,7 +29,10 @@ data class SignupFormState(
     val isSubmitting: Boolean = false,
 )
 
-class SignupViewModel : ViewModel() {
+/** Sign-up now creates a real Firebase Auth account (Phase 2.5) — the screen composable is unchanged. */
+class SignupViewModel(application: Application) : AndroidViewModel(application) {
+    private val authRepository = FirebaseAuthRepository()
+
     private val _formState = MutableStateFlow(SignupFormState())
     val formState: StateFlow<SignupFormState> = _formState.asStateFlow()
 
@@ -39,8 +47,8 @@ class SignupViewModel : ViewModel() {
     fun submit() {
         val current = _formState.value
         val fullNameError = if (current.fullName.isBlank()) "Name is required" else null
-        val emailError = validateEmail(current.email)
-        val passwordError = validatePassword(current.password)
+        val emailError = if (current.email.isBlank()) "Email is required" else null
+        val passwordError = if (current.password.isBlank()) "Password is required" else null
         val confirmPasswordError = when {
             current.confirmPassword.isBlank() -> "Confirm your password"
             current.confirmPassword != current.password -> "Passwords don't match"
@@ -59,9 +67,26 @@ class SignupViewModel : ViewModel() {
         }
         viewModelScope.launch {
             _formState.update { it.copy(isSubmitting = true) }
-            delay(600)
-            _formState.update { it.copy(isSubmitting = false) }
-            _signupEvent.emit(Unit)
+            authRepository.signUp(current.email, current.password, current.fullName)
+                .onSuccess { user ->
+                    FirestoreSyncRepository.getInstance(getApplication()).startListening(user.uid)
+                    // Fire-and-forget: FCM token retrieval can hang on emulators without full
+                    // Play Services support, and it's non-critical — must never block navigation.
+                    viewModelScope.launch { FcmTokenManager().registerToken(user.uid) }
+                    _formState.update { it.copy(isSubmitting = false) }
+                    _signupEvent.emit(Unit)
+                }
+                .onFailure { error ->
+                    val message = error.toAuthErrorMessage()
+                    val isEmailError = error.isAuthEmailFieldError()
+                    _formState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            emailError = if (isEmailError) message else null,
+                            passwordError = if (!isEmailError) message else null,
+                        )
+                    }
+                }
         }
     }
 }

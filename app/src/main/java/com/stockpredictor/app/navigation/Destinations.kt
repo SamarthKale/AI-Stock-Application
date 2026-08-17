@@ -19,9 +19,16 @@ sealed class Destinations(val route: String) {
     }
 
     companion object {
-        /** Only these five show the bottom nav bar (Task 6). */
-        val bottomNavRoutes = setOf(
-            Home.route, Watchlist.route, Predictions.route, Portfolio.route, Settings.route,
-        )
+        /**
+         * Only these five show the bottom nav bar (Task 6). Deliberately lazy: eagerly
+         * referencing sibling nested objects (Home, Watchlist, ...) from this companion's own
+         * initializer creates a circular class-init order with the sealed class itself,
+         * throwing a NullPointerException the moment anything touches Destinations before the
+         * nav graph has "warmed up" every route object in declaration order (e.g. Phase 2.5's
+         * AppNavHost reads Destinations.Home.route before building the NavHost at all).
+         */
+        val bottomNavRoutes: Set<String> by lazy {
+            setOf(Home.route, Watchlist.route, Predictions.route, Portfolio.route, Settings.route)
+        }
     }
 }

@@ -5,4 +5,5 @@ data class WatchlistEntity(
     val symbol: String,
     val addedAt: Long,
     val sortOrder: Int,
+    val updatedAt: Long,
 )

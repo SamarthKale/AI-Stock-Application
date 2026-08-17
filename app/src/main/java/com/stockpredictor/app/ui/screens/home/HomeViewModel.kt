@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.WatchlistDao
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.mock.MockStocks
 import com.stockpredictor.app.model.Stock
 import com.stockpredictor.app.ui.state.UiState
@@ -33,10 +34,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         refresh()
+        viewModelScope.launch {
+            FirestoreSyncRepository.changes.collect { refresh() }
+        }
     }
 
-    /** Called on init and again from the screen's LaunchedEffect(Unit) so a watchlist edit
-     *  made on another tab is reflected here when the user returns to Home. */
+    /** Called on init, on the shared sync-change signal (Phase 2.5 background Firestore
+     *  update), and again from the screen's LaunchedEffect(Unit) so a watchlist edit made on
+     *  another tab is reflected here when the user returns to Home. */
     fun refresh() {
         viewModelScope.launch {
             val symbols = dao.getAll().map { it.symbol }.toSet()

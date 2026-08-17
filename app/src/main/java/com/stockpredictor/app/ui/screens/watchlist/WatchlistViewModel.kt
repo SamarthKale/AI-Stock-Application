@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.WatchlistDao
+import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.mock.MockStocks
 import com.stockpredictor.app.model.Stock
 import com.stockpredictor.app.ui.state.UiState
@@ -15,9 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Backed by [WatchlistDao] (Phase 2) — the SQLite table is the single shared source of truth. */
+/** Backed by [WatchlistDao] for reads and [FirestoreSyncRepository] for writes (Phase 2.5) —
+ *  the SQLite table is the offline cache, Firestore is the synced source of truth. */
 class WatchlistViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = WatchlistDao(application)
+    private val syncRepository = FirestoreSyncRepository.getInstance(application)
+    private val authRepository = FirebaseAuthRepository()
     private val _symbols = MutableStateFlow<List<String>>(emptyList())
 
     val uiState: StateFlow<UiState<List<Stock>>> = debugAwareUiState(
@@ -27,18 +32,21 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         refresh()
+        viewModelScope.launch {
+            FirestoreSyncRepository.changes.collect { refresh() }
+        }
     }
 
-    /** Re-queries the DB. Called on init and again from the screen's LaunchedEffect(Unit) so
-     *  edits made elsewhere (e.g. Stock Detail's watchlist toggle) show up when this tab is revisited. */
+    /** Re-queries the DB. Called on init, after every local write, on the shared sync-change
+     *  signal (a background Firestore update), and again from the screen's LaunchedEffect(Unit)
+     *  so edits made elsewhere (e.g. Stock Detail's watchlist toggle) show up when revisited. */
     fun refresh() {
         viewModelScope.launch { _symbols.value = dao.getAll().map { it.symbol } }
     }
 
     fun remove(symbol: String) {
         viewModelScope.launch {
-            dao.delete(symbol)
-            refresh()
+            syncRepository.removeFromWatchlist(authRepository.currentUser?.uid, symbol)
         }
     }
 
@@ -53,8 +61,7 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
             val newIndex = (index + delta).coerceIn(0, current.lastIndex)
             if (index == newIndex) return@launch
             val reordered = current.toMutableList().apply { add(newIndex, removeAt(index)) }
-            dao.updateSortOrders(reordered)
-            refresh()
+            syncRepository.reorderWatchlist(authRepository.currentUser?.uid, reordered)
         }
     }
 }

@@ -11,7 +11,7 @@ import com.stockpredictor.app.data.local.DbContract.WatchlistTable
 import com.stockpredictor.app.mock.MockStocks
 
 private const val DB_NAME = "stockpredictor.db"
-private const val DB_VERSION = 1
+private const val DB_VERSION = 2 // v2 (Phase 2.5): added watchlist.updated_at for Firestore sync
 
 /**
  * Raw [SQLiteOpenHelper] — no Room. Reserves an `_id` PRIMARY KEY on every table even
@@ -28,7 +28,8 @@ class AppDatabaseHelper private constructor(context: Context) :
                 ${WatchlistTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
                 ${WatchlistTable.COL_SYMBOL} TEXT NOT NULL UNIQUE,
                 ${WatchlistTable.COL_ADDED_AT} INTEGER NOT NULL,
-                ${WatchlistTable.COL_SORT_ORDER} INTEGER NOT NULL
+                ${WatchlistTable.COL_SORT_ORDER} INTEGER NOT NULL,
+                ${WatchlistTable.COL_UPDATED_AT} INTEGER NOT NULL
             )
             """.trimIndent(),
         )
@@ -80,6 +81,7 @@ class AppDatabaseHelper private constructor(context: Context) :
                 put(WatchlistTable.COL_SYMBOL, stock.symbol)
                 put(WatchlistTable.COL_ADDED_AT, now)
                 put(WatchlistTable.COL_SORT_ORDER, index)
+                put(WatchlistTable.COL_UPDATED_AT, now)
             }
             db.insert(WatchlistTable.NAME, null, values)
         }
