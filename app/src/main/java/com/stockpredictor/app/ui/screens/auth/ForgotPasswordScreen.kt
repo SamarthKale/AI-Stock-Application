@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.ui.components.ClayAppBar
@@ -26,6 +25,7 @@ import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayButtonVariant
 import com.stockpredictor.app.ui.components.ClayTextField
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayIconSize
 import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
@@ -43,7 +43,7 @@ fun ForgotPasswordScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = ClaySpacing.Xxl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(imageVector = Icons.Filled.MarkEmailRead, contentDescription = null, tint = ClayColor.AccentMint, modifier = Modifier.height(48.dp))
+                    Icon(imageVector = Icons.Filled.MarkEmailRead, contentDescription = null, tint = ClayColor.AccentMint, modifier = Modifier.height(ClayIconSize.Large))
                     Spacer(modifier = Modifier.height(ClaySpacing.Md))
                     Text("Check your email", style = MaterialTheme.typography.titleLarge, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(ClaySpacing.Xs))

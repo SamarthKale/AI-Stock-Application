@@ -34,6 +34,28 @@ object ClayElevation {
     val Large: Dp = 10.dp
 }
 
+/** Icon sizes shared across clay components so icon scale never drifts screen to screen. */
+object ClayIconSize {
+    val Small: Dp = 14.dp   // inline icons, e.g. PriceChangeChip's up/down arrow
+    val Medium: Dp = 24.dp  // interactive icon buttons, e.g. watchlist reorder arrows
+    val Large: Dp = 48.dp   // state illustrations, e.g. Empty/Error/confirmation icons
+}
+
+/** One-off component dimensions that don't fit the spacing or icon-size scales. */
+object ClayDimens {
+    val SpinnerSize: Dp = 20.dp                        // ClayButton loading indicator
+    val SpinnerStroke: Dp = 2.dp                        // ClayButton loading indicator stroke
+    val ChartHeight: Dp = 140.dp                        // Stock Detail placeholder price chart
+    val WatchlistTileWidth: Dp = 200.dp                 // Home horizontal watchlist card width
+    val ConfidenceBarHeight: Dp = 10.dp                 // PredictionConfidenceBar track height
+    val OnboardingDotActive: Dp = 10.dp
+    val OnboardingDotInactive: Dp = 8.dp
+    val UnreadDotSize: Dp = 8.dp                        // Notifications unread indicator dot
+    val UnreadDotTopOffset: Dp = 6.dp                   // aligns the dot with the title's cap height
+    val ReadRowIndent: Dp = ClaySpacing.Md + UnreadDotSize // aligns read rows with unread rows' dot+gap width
+    val IconTextGap: Dp = 2.dp                          // tight gap between an inline icon and its label
+}
+
 /**
  * Dual-shadow "clay" emboss: a light offset shape drawn top-left and a dark offset shape
  * drawn bottom-right, both peeking out from behind the opaque content on top of them.

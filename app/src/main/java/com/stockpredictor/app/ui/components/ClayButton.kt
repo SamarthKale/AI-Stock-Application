@@ -21,8 +21,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import com.stockpredictor.app.ui.theme.ClayTheme
@@ -68,9 +68,9 @@ fun ClayButton(
     ) {
         if (loading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(ClayDimens.SpinnerSize),
                 color = contentColor,
-                strokeWidth = 2.dp,
+                strokeWidth = ClayDimens.SpinnerStroke,
             )
         } else {
             Text(text = text, color = contentColor, fontWeight = FontWeight.SemiBold)

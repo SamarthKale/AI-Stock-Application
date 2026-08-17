@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.model.NotificationItem
@@ -35,6 +34,7 @@ import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import java.text.DateFormat
 import java.util.Date
@@ -72,13 +72,13 @@ private fun NotificationRow(notification: NotificationItem, onClick: () -> Unit)
             if (!notification.isRead) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 6.dp)
-                        .size(8.dp)
+                        .padding(top = ClayDimens.UnreadDotTopOffset)
+                        .size(ClayDimens.UnreadDotSize)
                         .background(ClayColor.AccentPrimary, CircleShape),
                 )
                 Spacer(modifier = Modifier.width(ClaySpacing.Sm))
             } else {
-                Spacer(modifier = Modifier.width(ClaySpacing.Md + 8.dp))
+                Spacer(modifier = Modifier.width(ClayDimens.ReadRowIndent))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(

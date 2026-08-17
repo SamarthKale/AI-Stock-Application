@@ -21,12 +21,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayButtonVariant
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import kotlinx.coroutines.launch
 
@@ -71,10 +71,10 @@ fun OnboardingScreen(
         ) {
             repeat(slides.size) { index ->
                 val active = pagerState.currentPage == index
-                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                Column(modifier = Modifier.padding(horizontal = ClaySpacing.Xs)) {
                     Spacer(
                         modifier = Modifier
-                            .size(if (active) 10.dp else 8.dp)
+                            .size(if (active) ClayDimens.OnboardingDotActive else ClayDimens.OnboardingDotInactive)
                             .background(
                                 color = if (active) ClayColor.AccentPrimary else ClayColor.TextSecondary.copy(alpha = 0.3f),
                                 shape = CircleShape,

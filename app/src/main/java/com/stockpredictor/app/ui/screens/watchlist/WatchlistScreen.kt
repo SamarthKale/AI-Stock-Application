@@ -22,10 +22,10 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.model.Stock
@@ -36,6 +36,7 @@ import com.stockpredictor.app.ui.components.LoadingState
 import com.stockpredictor.app.ui.components.StockListTile
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayIconSize
 import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
 
@@ -45,6 +46,11 @@ fun WatchlistScreen(
     viewModel: WatchlistViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // The ViewModel survives bottom-nav tab switches (saveState/restoreState), but this
+    // composable is disposed and re-entered each time — re-query so edits made on Stock
+    // Detail while this tab was backgrounded show up when the user returns to it.
+    LaunchedEffect(Unit) { viewModel.refresh() }
 
     Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
         ClayAppBar(title = "Watchlist")
@@ -110,10 +116,10 @@ private fun WatchlistRow(
             onClick = onClick,
             trailing = {
                 Column {
-                    IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onMoveUp, modifier = Modifier.size(ClayIconSize.Medium)) {
                         Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Move up", tint = ClayColor.TextSecondary)
                     }
-                    IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onMoveDown, modifier = Modifier.size(ClayIconSize.Medium)) {
                         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Move down", tint = ClayColor.TextSecondary)
                     }
                 }

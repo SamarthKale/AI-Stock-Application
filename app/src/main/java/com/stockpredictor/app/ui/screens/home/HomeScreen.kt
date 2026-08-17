@@ -21,11 +21,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.model.Stock
@@ -37,6 +37,7 @@ import com.stockpredictor.app.ui.components.LoadingState
 import com.stockpredictor.app.ui.components.StockListTile
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
@@ -47,6 +48,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // See WatchlistScreen's identical LaunchedEffect for why: the ViewModel survives tab
+    // switches but this composable doesn't, so re-query on each entry to this tab.
+    LaunchedEffect(Unit) { viewModel.refresh() }
 
     Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
         // Notifications has no bottom-nav tab (Task 6), so Home surfaces it here;
@@ -103,7 +108,7 @@ private fun HomeContent(
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(ClaySpacing.Md)) {
                     items(data.watchlistStocks, key = { it.symbol }) { stock ->
-                        Box(modifier = Modifier.width(200.dp)) {
+                        Box(modifier = Modifier.width(ClayDimens.WatchlistTileWidth)) {
                             StockListTile(stock = stock, onClick = { onStockClick(stock.symbol) })
                         }
                     }

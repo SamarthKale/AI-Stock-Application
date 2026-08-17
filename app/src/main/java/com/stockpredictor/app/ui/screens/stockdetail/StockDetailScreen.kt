@@ -13,14 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.model.Prediction
@@ -37,13 +38,19 @@ import com.stockpredictor.app.ui.components.PredictionConfidenceBar
 import com.stockpredictor.app.ui.components.PriceChangeChip
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
 fun StockDetailScreen(
     symbol: String,
     onBack: () -> Unit,
-    viewModel: StockDetailViewModel = viewModel(factory = StockDetailViewModelFactory(symbol)),
+    viewModel: StockDetailViewModel = viewModel(
+        factory = StockDetailViewModelFactory(
+            application = LocalContext.current.applicationContext as Application,
+            symbol = symbol,
+        ),
+    ),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -135,7 +142,7 @@ private fun PriceHistoryChart(
     modifier: Modifier = Modifier,
 ) {
     val lineColor = if (isPositive) ClayColor.AccentMint else ClayColor.AccentCoral
-    Canvas(modifier = modifier.fillMaxWidth().height(140.dp)) {
+    Canvas(modifier = modifier.fillMaxWidth().height(ClayDimens.ChartHeight)) {
         if (history.size < 2) return@Canvas
         val prices = history.map { it.price }
         val minPrice = prices.min()

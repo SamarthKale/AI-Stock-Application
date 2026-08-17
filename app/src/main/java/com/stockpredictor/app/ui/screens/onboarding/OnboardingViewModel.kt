@@ -25,7 +25,10 @@ private val defaultSlides = listOf(
 /**
  * Onboarding is static local content, not a fetch — so its "ui state" is a plain
  * slide list rather than the Loading/Empty/Error UiState<T> used by data screens.
- * "Don't show again" persistence is out of scope until Phase 2's SettingsDao.
+ *
+ * TODO(Phase 2): persist a "don't show again" flag via SettingsDao once SQLite lands,
+ * so onboarding only shows once per install instead of on every cold start. Not
+ * implemented here — there is no local storage yet in Phase 1.
  */
 class OnboardingViewModel : ViewModel() {
     private val _slides = MutableStateFlow(defaultSlides)

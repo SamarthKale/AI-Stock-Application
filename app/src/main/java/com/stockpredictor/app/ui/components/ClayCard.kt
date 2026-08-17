@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
@@ -38,7 +37,7 @@ fun ClayCard(
 @Composable
 private fun ClayCardPreview() {
     ClayTheme {
-        ClayCard(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        ClayCard(modifier = Modifier.fillMaxWidth().padding(ClaySpacing.Lg)) {
             Text("Clay surface", color = ClayColor.TextPrimary)
         }
     }

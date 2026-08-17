@@ -12,8 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import com.stockpredictor.app.ui.theme.ClayTheme
@@ -34,7 +34,7 @@ fun PredictionConfidenceBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(10.dp)
+                .height(ClayDimens.ConfidenceBarHeight)
                 .background(ClayColor.TextSecondary.copy(alpha = 0.15f), ClayShapes.Bar),
         ) {
             Box(
@@ -59,9 +59,9 @@ private fun PredictionConfidenceBarPreview() {
     ClayTheme {
         Column {
             PredictionConfidenceBar(confidence = 25f)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(ClaySpacing.Sm))
             PredictionConfidenceBar(confidence = 55f)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(ClaySpacing.Sm))
             PredictionConfidenceBar(confidence = 88f)
         }
     }

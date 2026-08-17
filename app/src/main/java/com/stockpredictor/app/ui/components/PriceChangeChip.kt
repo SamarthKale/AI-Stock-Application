@@ -16,8 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
+import com.stockpredictor.app.ui.theme.ClayIconSize
 import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import com.stockpredictor.app.ui.theme.ClayTheme
@@ -40,9 +41,9 @@ fun PriceChangeChip(
             imageVector = if (isPositive) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
             contentDescription = if (isPositive) "Up" else "Down",
             tint = color,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(ClayIconSize.Small),
         )
-        Spacer(modifier = Modifier.width(2.dp))
+        Spacer(modifier = Modifier.width(ClayDimens.IconTextGap))
         Text(
             text = "${String.format("%.2f", abs(changePercent))}%",
             color = color,
@@ -57,7 +58,7 @@ private fun PriceChangeChipPreview() {
     ClayTheme {
         Row {
             PriceChangeChip(changePercent = 1.45)
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(ClaySpacing.Sm))
             PriceChangeChip(changePercent = -0.77)
         }
     }

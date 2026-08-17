@@ -1,7 +1,9 @@
 package com.stockpredictor.app.ui.screens.search
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.stockpredictor.app.data.local.dao.RecentSearchDao
 import com.stockpredictor.app.mock.MockStocks
 import kotlinx.coroutines.FlowPreview
 import com.stockpredictor.app.model.Stock
@@ -15,10 +17,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
-class SearchViewModel : ViewModel() {
+class SearchViewModel(application: Application) : AndroidViewModel(application) {
+    private val dao = RecentSearchDao(application)
+
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
@@ -41,16 +45,27 @@ class SearchViewModel : ViewModel() {
         errorMessage = "Search failed. Please try again.",
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
+    init {
+        refreshRecentSearches()
+    }
+
     fun onQueryChange(value: String) {
         _query.value = value
     }
 
-    /** Record a search on submit (not per keystroke); re-timestamp instead of duplicating. */
+    /** Record a search on submit (not per keystroke); DAO re-timestamps instead of duplicating. */
     fun onSearchSubmit(query: String = _query.value) {
         val trimmed = query.trim()
         if (trimmed.isBlank()) return
-        _recentSearches.update { current ->
-            (listOf(trimmed) + current.filterNot { it.equals(trimmed, ignoreCase = true) }).take(10)
+        viewModelScope.launch {
+            dao.recordSearch(trimmed)
+            refreshRecentSearches()
+        }
+    }
+
+    private fun refreshRecentSearches() {
+        viewModelScope.launch {
+            _recentSearches.value = dao.getAll().map { it.query }
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.stockpredictor.app.ui.screens.settings
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.stockpredictor.app.data.local.dao.SettingsDao
 import com.stockpredictor.app.debug.DebugStateController
 import com.stockpredictor.app.debug.DebugUiMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,18 +11,25 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class SettingsUiData(
     val notificationsEnabled: Boolean,
     val debugMode: DebugUiMode,
 )
 
+private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+
 /**
  * Deliberately always renders its real content (never Loading/Empty/Error) — this is the
  * screen that drives DebugStateController, so if it also obeyed the toggle it could hide
  * its own controls and strand the tester in a forced state with no way back.
+ *
+ * The notifications toggle persists via [SettingsDao] (Phase 2). The debug UI-state toggle
+ * stays in-memory only (DebugStateController) — it's a dev tool, not user data.
  */
-class SettingsViewModel : ViewModel() {
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val dao = SettingsDao(application)
     private val _notificationsEnabled = MutableStateFlow(true)
 
     val uiState: StateFlow<SettingsUiData> = combine(
@@ -29,8 +38,15 @@ class SettingsViewModel : ViewModel() {
         SettingsUiData(enabled, mode)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiData(true, DebugUiMode.NONE))
 
+    init {
+        viewModelScope.launch {
+            _notificationsEnabled.value = dao.getBoolean(KEY_NOTIFICATIONS_ENABLED, default = true)
+        }
+    }
+
     fun toggleNotifications(enabled: Boolean) {
         _notificationsEnabled.value = enabled
+        viewModelScope.launch { dao.setBoolean(KEY_NOTIFICATIONS_ENABLED, enabled) }
     }
 
     fun setDebugMode(mode: DebugUiMode) {
