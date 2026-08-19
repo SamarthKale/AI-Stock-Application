@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/stockpredictor_test
+    username: ${DB_USERNAME:stockpredictor_app}
+    password: ${DB_PASSWORD:}
+  flyway:
+    clean-disabled: false

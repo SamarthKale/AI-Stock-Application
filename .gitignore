@@ -16,3 +16,7 @@ local.properties
 
 # Firebase config — contains project-specific API keys; repo is public, never commit this.
 /app/google-services.json
+
+# Backend (Phase 3) — Gradle build output; the root /build rule above only matches the app module.
+backend/build
+backend/bin
