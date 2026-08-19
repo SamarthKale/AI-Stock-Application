@@ -17,7 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-private const val CHANNEL_ID = "stock_alerts"
+private const val CHANNEL_ID = "crypto_alerts"
 
 /**
  * Receive-and-display only in this phase (Phase 2.5) — no in-app Notifications-tab item
@@ -61,7 +61,7 @@ class StockPredictorFcmService : FirebaseMessagingService() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Stock Alerts", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_ID, "Crypto Alerts", NotificationManager.IMPORTANCE_DEFAULT),
             )
         }
     }

@@ -1,4 +1,4 @@
-package com.stockpredictor.app.ui.screens.stockdetail
+package com.stockpredictor.app.ui.screens.cryptodetail
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -42,25 +42,25 @@ import com.stockpredictor.app.ui.theme.ClayDimens
 import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
-fun StockDetailScreen(
-    symbol: String,
+fun CryptoDetailScreen(
+    coinId: String,
     onBack: () -> Unit,
-    viewModel: StockDetailViewModel = viewModel(
-        factory = StockDetailViewModelFactory(
+    viewModel: CryptoDetailViewModel = viewModel(
+        factory = CryptoDetailViewModelFactory(
             application = LocalContext.current.applicationContext as Application,
-            symbol = symbol,
+            coinId = coinId,
         ),
     ),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
-        ClayAppBar(title = symbol, onBack = onBack)
+        ClayAppBar(title = coinId, onBack = onBack)
         when (val s = state) {
             is UiState.Loading -> LoadingState(modifier = Modifier.weight(1f))
-            is UiState.Empty -> EmptyState(message = "We don't have data for $symbol.", modifier = Modifier.weight(1f))
+            is UiState.Empty -> EmptyState(message = "We don't have data for $coinId.", modifier = Modifier.weight(1f))
             is UiState.Error -> ErrorState(message = s.message, onRetry = s.retry, modifier = Modifier.weight(1f))
-            is UiState.Success -> StockDetailContent(
+            is UiState.Success -> CryptoDetailContent(
                 data = s.data,
                 onToggleWatchlist = viewModel::toggleWatchlist,
                 modifier = Modifier.weight(1f),
@@ -70,30 +70,29 @@ fun StockDetailScreen(
 }
 
 @Composable
-private fun StockDetailContent(
-    data: StockDetailData,
+private fun CryptoDetailContent(
+    data: CryptoDetailData,
     onToggleWatchlist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val stock = data.stock
-    val currencySymbol = if (stock.exchange in setOf("NASDAQ", "NYSE")) "$" else "₹"
+    val coin = data.coin
 
     Column(modifier = modifier.fillMaxSize().padding(ClaySpacing.Lg)) {
-        Text(stock.name, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodyMedium)
+        Text(coin.name, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(ClaySpacing.Xs))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "$currencySymbol${String.format("%.2f", stock.price)}",
+                text = "$${String.format("%.2f", coin.currentPrice)}",
                 color = ClayColor.TextPrimary,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.width(ClaySpacing.Sm))
-            PriceChangeChip(changePercent = stock.changePercent)
+            PriceChangeChip(changePercent = coin.priceChangePercentage24h)
         }
         Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         ClayCard(modifier = Modifier.fillMaxWidth()) {
-            PriceHistoryChart(history = stock.history, isPositive = stock.changePercent >= 0.0)
+            PriceHistoryChart(history = coin.history, isPositive = coin.priceChangePercentage24h >= 0.0)
         }
         Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         PredictionSection(prediction = data.prediction)
@@ -116,7 +115,7 @@ private fun PredictionSection(prediction: Prediction?) {
             if (prediction == null) {
                 // Small, scoped empty state — not the whole screen's ErrorState — since a
                 // missing prediction is additive, not load-bearing (mirrors Phase 5's design).
-                Text("No prediction available for this stock yet.", color = ClayColor.TextSecondary)
+                Text("No prediction available for this coin yet.", color = ClayColor.TextSecondary)
             } else {
                 val directionLabel = when (prediction.direction) {
                     PredictionDirection.Up -> "Bullish"

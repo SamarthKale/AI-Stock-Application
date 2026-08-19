@@ -28,12 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.stockpredictor.app.model.Stock
+import com.stockpredictor.app.model.Coin
 import com.stockpredictor.app.ui.components.ClayAppBar
+import com.stockpredictor.app.ui.components.CoinListTile
 import com.stockpredictor.app.ui.components.EmptyState
 import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
-import com.stockpredictor.app.ui.components.StockListTile
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClayIconSize
@@ -42,13 +42,13 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
 fun WatchlistScreen(
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     viewModel: WatchlistViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // The ViewModel survives bottom-nav tab switches (saveState/restoreState), but this
-    // composable is disposed and re-entered each time — re-query so edits made on Stock
+    // composable is disposed and re-entered each time — re-query so edits made on Crypto
     // Detail while this tab was backgrounded show up when the user returns to it.
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -63,13 +63,13 @@ fun WatchlistScreen(
                 contentPadding = PaddingValues(ClaySpacing.Lg),
                 verticalArrangement = Arrangement.spacedBy(ClaySpacing.Md),
             ) {
-                items(s.data, key = { it.symbol }) { stock ->
+                items(s.data, key = { it.id }) { coin ->
                     WatchlistRow(
-                        stock = stock,
-                        onClick = { onStockClick(stock.symbol) },
-                        onRemove = { viewModel.remove(stock.symbol) },
-                        onMoveUp = { viewModel.moveUp(stock.symbol) },
-                        onMoveDown = { viewModel.moveDown(stock.symbol) },
+                        coin = coin,
+                        onClick = { onCoinClick(coin.id) },
+                        onRemove = { viewModel.remove(coin.id) },
+                        onMoveUp = { viewModel.moveUp(coin.id) },
+                        onMoveDown = { viewModel.moveDown(coin.id) },
                     )
                 }
             }
@@ -80,7 +80,7 @@ fun WatchlistScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WatchlistRow(
-    stock: Stock,
+    coin: Coin,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     onMoveUp: () -> Unit,
@@ -111,8 +111,8 @@ private fun WatchlistRow(
             }
         },
     ) {
-        StockListTile(
-            stock = stock,
+        CoinListTile(
+            coin = coin,
             onClick = onClick,
             trailing = {
                 Column {

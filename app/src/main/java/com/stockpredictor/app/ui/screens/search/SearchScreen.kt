@@ -26,10 +26,10 @@ import com.stockpredictor.app.debug.DebugStateController
 import com.stockpredictor.app.debug.DebugUiMode
 import com.stockpredictor.app.ui.components.ClayAppBar
 import com.stockpredictor.app.ui.components.ClayTextField
+import com.stockpredictor.app.ui.components.CoinRankTile
 import com.stockpredictor.app.ui.components.EmptyState
 import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
-import com.stockpredictor.app.ui.components.StockListTile
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClayShapes
@@ -38,7 +38,7 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     viewModel: SearchViewModel = viewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -54,15 +54,15 @@ fun SearchScreen(
             ClayTextField(
                 value = query,
                 onValueChange = viewModel::onQueryChange,
-                label = "Search stocks",
+                label = "Search coins",
             )
         }
         if (query.isBlank() && debugMode == DebugUiMode.NONE) {
             RecentSearchesSection(
                 recentSearches = recentSearches,
-                onChipClick = { symbol ->
-                    viewModel.onQueryChange(symbol)
-                    viewModel.onSearchSubmit(symbol)
+                onChipClick = { query ->
+                    viewModel.onQueryChange(query)
+                    viewModel.onSearchSubmit(query)
                 },
             )
         } else {
@@ -75,12 +75,14 @@ fun SearchScreen(
                     contentPadding = PaddingValues(ClaySpacing.Lg),
                     verticalArrangement = Arrangement.spacedBy(ClaySpacing.Md),
                 ) {
-                    items(s.data, key = { it.symbol }) { stock ->
-                        StockListTile(
-                            stock = stock,
+                    items(s.data, key = { it.id }) { hit ->
+                        CoinRankTile(
+                            symbol = hit.symbol,
+                            name = hit.name,
+                            marketCapRank = hit.marketCapRank,
                             onClick = {
-                                viewModel.onSearchSubmit(stock.symbol)
-                                onStockClick(stock.symbol)
+                                viewModel.onSearchSubmit(hit.symbol)
+                                onCoinClick(hit.id)
                             },
                         )
                     }

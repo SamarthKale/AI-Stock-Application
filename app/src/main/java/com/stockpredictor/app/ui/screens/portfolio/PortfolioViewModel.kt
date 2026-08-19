@@ -2,6 +2,7 @@ package com.stockpredictor.app.ui.screens.portfolio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.stockpredictor.app.mock.MockCoins
 import com.stockpredictor.app.mock.MockPortfolio
 import com.stockpredictor.app.model.PortfolioHolding
 import com.stockpredictor.app.ui.state.UiState
@@ -30,4 +31,8 @@ class PortfolioViewModel : ViewModel() {
         },
         isEmpty = { it.holdings.isEmpty() },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    /** [PortfolioHolding.symbol] is a display ticker, not a coin id — resolve it against the
+     *  same mock coin catalog before navigating to Crypto Detail (which needs a coin id). */
+    fun resolveCoinId(symbol: String): String? = MockCoins.findBySymbol(symbol)?.id
 }

@@ -4,19 +4,23 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.stockpredictor.app.data.local.DbContract.CachedCoinTable
 import com.stockpredictor.app.data.local.DbContract.CachedPredictionTable
+import com.stockpredictor.app.data.local.DbContract.CachedPriceHistoryTable
 import com.stockpredictor.app.data.local.DbContract.RecentSearchTable
 import com.stockpredictor.app.data.local.DbContract.SettingsTable
 import com.stockpredictor.app.data.local.DbContract.WatchlistTable
-import com.stockpredictor.app.mock.MockStocks
+import com.stockpredictor.app.mock.MockCoins
 
 private const val DB_NAME = "stockpredictor.db"
-private const val DB_VERSION = 2 // v2 (Phase 2.5): added watchlist.updated_at for Firestore sync
+private const val DB_VERSION = 3 // v3 (Crypto Predictor migration): watchlist becomes coin-keyed, adds cached_coins/cached_price_history
 
 /**
  * Raw [SQLiteOpenHelper] — no Room. Reserves an `_id` PRIMARY KEY on every table even
  * where a natural key (symbol/key) looks sufficient, because Phase 2.5's Firestore sync
- * needs a stable local row identity independent of any remote document ID.
+ * needs a stable local row identity independent of any remote document ID. (Exception:
+ * CachedCoinTable, whose natural key — coin_id — already is the row identity for a pure
+ * upsert cache, so it skips the separate autoincrement id.)
  */
 class AppDatabaseHelper private constructor(context: Context) :
     SQLiteOpenHelper(context.applicationContext, DB_NAME, null, DB_VERSION) {
@@ -26,7 +30,10 @@ class AppDatabaseHelper private constructor(context: Context) :
             """
             CREATE TABLE ${WatchlistTable.NAME} (
                 ${WatchlistTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                ${WatchlistTable.COL_SYMBOL} TEXT NOT NULL UNIQUE,
+                ${WatchlistTable.COL_COIN_ID} TEXT NOT NULL UNIQUE,
+                ${WatchlistTable.COL_SYMBOL} TEXT NOT NULL,
+                ${WatchlistTable.COL_NAME} TEXT,
+                ${WatchlistTable.COL_IMAGE_URL} TEXT,
                 ${WatchlistTable.COL_ADDED_AT} INTEGER NOT NULL,
                 ${WatchlistTable.COL_SORT_ORDER} INTEGER NOT NULL,
                 ${WatchlistTable.COL_UPDATED_AT} INTEGER NOT NULL
@@ -65,20 +72,71 @@ class AppDatabaseHelper private constructor(context: Context) :
             )
             """.trimIndent(),
         )
+        createCachedCoinsTable(db)
+        createCachedPriceHistoryTable(db)
         seedDefaultWatchlist(db)
     }
 
+    private fun createCachedCoinsTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE ${CachedCoinTable.NAME} (
+                ${CachedCoinTable.COL_COIN_ID} TEXT PRIMARY KEY,
+                ${CachedCoinTable.COL_SYMBOL} TEXT NOT NULL,
+                ${CachedCoinTable.COL_NAME} TEXT NOT NULL,
+                ${CachedCoinTable.COL_IMAGE_URL} TEXT,
+                ${CachedCoinTable.COL_CURRENT_PRICE} REAL NOT NULL,
+                ${CachedCoinTable.COL_PRICE_CHANGE_24H} REAL NOT NULL,
+                ${CachedCoinTable.COL_PRICE_CHANGE_PERCENTAGE_24H} REAL NOT NULL,
+                ${CachedCoinTable.COL_MARKET_CAP} INTEGER,
+                ${CachedCoinTable.COL_MARKET_CAP_RANK} INTEGER,
+                ${CachedCoinTable.COL_TOTAL_VOLUME} REAL,
+                ${CachedCoinTable.COL_HIGH_24H} REAL,
+                ${CachedCoinTable.COL_LOW_24H} REAL,
+                ${CachedCoinTable.COL_CIRCULATING_SUPPLY} REAL,
+                ${CachedCoinTable.COL_TOTAL_SUPPLY} REAL,
+                ${CachedCoinTable.COL_MAX_SUPPLY} REAL,
+                ${CachedCoinTable.COL_ATH} REAL,
+                ${CachedCoinTable.COL_ATH_CHANGE_PERCENTAGE} REAL,
+                ${CachedCoinTable.COL_ATL} REAL,
+                ${CachedCoinTable.COL_ATL_CHANGE_PERCENTAGE} REAL,
+                ${CachedCoinTable.COL_SPARKLINE_JSON} TEXT,
+                ${CachedCoinTable.COL_CACHED_AT} INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+    }
+
+    private fun createCachedPriceHistoryTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE ${CachedPriceHistoryTable.NAME} (
+                ${CachedPriceHistoryTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${CachedPriceHistoryTable.COL_COIN_ID} TEXT NOT NULL,
+                ${CachedPriceHistoryTable.COL_VS_CURRENCY} TEXT NOT NULL,
+                ${CachedPriceHistoryTable.COL_RANGE_KEY} TEXT NOT NULL,
+                ${CachedPriceHistoryTable.COL_POINTS_JSON} TEXT NOT NULL,
+                ${CachedPriceHistoryTable.COL_CACHED_AT} INTEGER NOT NULL,
+                UNIQUE(${CachedPriceHistoryTable.COL_COIN_ID}, ${CachedPriceHistoryTable.COL_VS_CURRENCY}, ${CachedPriceHistoryTable.COL_RANGE_KEY})
+            )
+            """.trimIndent(),
+        )
+    }
+
     /**
-     * Fresh installs start with the same first-5-tickers watchlist Phase 1's in-memory
+     * Fresh installs start with the same first-5-coins watchlist Phase 1's in-memory
      * seed used, so first-run UX is unchanged now that the table is the real source of
      * truth. This only runs once, at table creation — removing every item afterward
      * correctly leaves the table empty, it is never re-seeded.
      */
     private fun seedDefaultWatchlist(db: SQLiteDatabase) {
         val now = System.currentTimeMillis()
-        MockStocks.all.take(5).forEachIndexed { index, stock ->
+        MockCoins.all.take(5).forEachIndexed { index, coin ->
             val values = ContentValues().apply {
-                put(WatchlistTable.COL_SYMBOL, stock.symbol)
+                put(WatchlistTable.COL_COIN_ID, coin.id)
+                put(WatchlistTable.COL_SYMBOL, coin.symbol)
+                put(WatchlistTable.COL_NAME, coin.name)
+                put(WatchlistTable.COL_IMAGE_URL, coin.image)
                 put(WatchlistTable.COL_ADDED_AT, now)
                 put(WatchlistTable.COL_SORT_ORDER, index)
                 put(WatchlistTable.COL_UPDATED_AT, now)
@@ -88,17 +146,25 @@ class AppDatabaseHelper private constructor(context: Context) :
     }
 
     /**
-     * Version-bump-and-recreate: acceptable for this project's pre-launch scope, but this
-     * drops all local user data (watchlist, recent searches, settings, cached predictions)
-     * on any schema change. Must be replaced with real ALTER TABLE migrations before
-     * Phase 6's production hardening if the schema changes again after real users exist.
+     * v1→v2 (Phase 2.5) used a blanket drop-and-recreate, an acceptable documented tradeoff
+     * for this project's pre-launch scope. v2→v3 (the Crypto Predictor migration) is a real
+     * in-place migration instead: watchlist gains coin_id/name/image_url via ALTER TABLE (not
+     * a drop), since a ticker symbol alone is no longer a safe CoinGecko lookup key. Existing
+     * rows are cleared afterward — legacy stock-ticker rows (e.g. "RELIANCE.NS") have no
+     * CoinGecko equivalent to migrate to — but recent_searches/settings/cached_predictions are
+     * left untouched. Must be replaced with real per-column ALTER TABLE migrations (as done
+     * here) rather than any further blanket recreate, now that real user data exists.
      */
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS ${WatchlistTable.NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${RecentSearchTable.NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${SettingsTable.NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${CachedPredictionTable.NAME}")
-        onCreate(db)
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE ${WatchlistTable.NAME} ADD COLUMN ${WatchlistTable.COL_COIN_ID} TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE ${WatchlistTable.NAME} ADD COLUMN ${WatchlistTable.COL_NAME} TEXT")
+            db.execSQL("ALTER TABLE ${WatchlistTable.NAME} ADD COLUMN ${WatchlistTable.COL_IMAGE_URL} TEXT")
+            db.execSQL("DELETE FROM ${WatchlistTable.NAME}")
+            createCachedCoinsTable(db)
+            createCachedPriceHistoryTable(db)
+            seedDefaultWatchlist(db)
+        }
     }
 
     companion object {

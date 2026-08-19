@@ -41,6 +41,14 @@ class FirebaseAuthRepository(
 
     fun signOut() = auth.signOut()
 
+    /** [forceRefresh] should stay false in the common path — Firebase caches the current token
+     *  and only hits its token endpoint when actually needed; forcing on every call would
+     *  needlessly hit that endpoint per request (Phase 5's BackendAuthenticator forces this only
+     *  after an observed 401, matching CLAUDE.md's original Phase 4 guidance for this exact
+     *  seam). Returns null if there's no signed-in user or the refresh fails. */
+    suspend fun getIdToken(forceRefresh: Boolean = false): String? =
+        auth.currentUser?.getIdToken(forceRefresh)?.await()?.token
+
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> = runCatching {
         auth.sendPasswordResetEmail(email).await()
     }

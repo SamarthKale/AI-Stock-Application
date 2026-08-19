@@ -37,7 +37,7 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
 fun PredictionsScreen(
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     viewModel: PredictionsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,13 +57,13 @@ fun PredictionsScreen(
                 contentPadding = PaddingValues(ClaySpacing.Lg),
                 verticalArrangement = Arrangement.spacedBy(ClaySpacing.Md),
             ) {
-                items(s.data, key = { it.stock.symbol }) { row ->
+                items(s.data, key = { it.coin.id }) { row ->
                     ClayCard(
-                        modifier = Modifier.fillMaxWidth().clickable { onStockClick(row.stock.symbol) },
+                        modifier = Modifier.fillMaxWidth().clickable { onCoinClick(row.coin.id) },
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(row.stock.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(row.coin.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(directionLabel(row.prediction.direction), color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodyMedium)
                             }
                             Spacer(modifier = Modifier.height(ClaySpacing.Sm))

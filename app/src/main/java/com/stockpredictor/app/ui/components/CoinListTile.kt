@@ -14,20 +14,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.stockpredictor.app.model.Coin
 import com.stockpredictor.app.model.PricePoint
-import com.stockpredictor.app.model.Stock
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClaySpacing
 import com.stockpredictor.app.ui.theme.ClayTheme
 
 @Composable
-fun StockListTile(
-    stock: Stock,
+fun CoinListTile(
+    coin: Coin,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    val currencySymbol = if (stock.exchange in setOf("NASDAQ", "NYSE")) "$" else "₹"
     ClayCard(
         modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         padding = ClaySpacing.Md,
@@ -37,17 +36,17 @@ fun StockListTile(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = stock.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium)
-                Text(text = stock.name, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(text = coin.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(text = coin.name, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$currencySymbol${String.format("%.2f", stock.price)}",
+                    text = "$${String.format("%.2f", coin.currentPrice)}",
                     color = ClayColor.TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(modifier = Modifier.height(ClaySpacing.Xs))
-                PriceChangeChip(changePercent = stock.changePercent)
+                PriceChangeChip(changePercent = coin.priceChangePercentage24h)
             }
             if (trailing != null) {
                 Spacer(modifier = Modifier.width(ClaySpacing.Sm))
@@ -59,17 +58,30 @@ fun StockListTile(
 
 @Preview(showBackground = true, backgroundColor = 0xFFF4F3F1)
 @Composable
-private fun StockListTilePreview() {
+private fun CoinListTilePreview() {
     ClayTheme {
-        StockListTile(
-            stock = Stock(
-                symbol = "RELIANCE.NS",
-                name = "Reliance Industries",
-                exchange = "NSE",
-                price = 2938.45,
-                change = 42.10,
-                changePercent = 1.45,
-                history = listOf(PricePoint(0L, 2900.0)),
+        CoinListTile(
+            coin = Coin(
+                id = "bitcoin",
+                symbol = "BTC",
+                name = "Bitcoin",
+                image = null,
+                currentPrice = 62384.50,
+                marketCap = null,
+                marketCapRank = 1,
+                totalVolume = null,
+                high24h = null,
+                low24h = null,
+                priceChange24h = 912.30,
+                priceChangePercentage24h = 1.48,
+                circulatingSupply = null,
+                totalSupply = null,
+                maxSupply = null,
+                ath = null,
+                athChangePercentage = null,
+                atl = null,
+                atlChangePercentage = null,
+                history = listOf(PricePoint(0L, 61472.20)),
                 lastUpdated = 0L,
             ),
             onClick = {},

@@ -70,7 +70,7 @@ fun SettingsScreen(
             }
             item {
                 SettingsSection(title = "About") {
-                    Text("AI Stock Predictor · v1.0 (Phase 1)", color = ClayColor.TextSecondary)
+                    Text("AI Crypto Predictor · v1.0 (Phase 1)", color = ClayColor.TextSecondary)
                 }
             }
             item {

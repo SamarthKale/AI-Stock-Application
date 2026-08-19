@@ -21,7 +21,9 @@ private const val PUSH_TIMEOUT_MS = 10_000L
 
 /**
  * Firestore schema (mirrors the SQLite entity shapes, per Phase 2.5):
- *   users/{uid}/watchlist/{symbol}  — symbol, added_at, sort_order, updated_at (server timestamp)
+ *   users/{uid}/watchlist/{coinId} — coin_id, symbol, name, image_url, added_at, sort_order,
+ *     updated_at (server timestamp). Documents are keyed by CoinGecko coin id, not ticker
+ *     symbol (Crypto Predictor migration) — a symbol alone isn't a safe cross-device key.
  *   users/{uid}/portfolio/{holdingId} — reserved for when Portfolio gets local SQLite persistence;
  *     not implemented here since Phase 2 never added a PortfolioDao to sync against.
  *
@@ -69,23 +71,26 @@ class FirestoreSyncRepository private constructor(context: Context) {
                     // there's nothing valid to compare yet. pushWatchlistItem's own read-back
                     // is what reconciles the local row once the write is actually confirmed.
                     if (change.document.metadata.hasPendingWrites()) continue
-                    val symbol = change.document.id
+                    val coinId = change.document.id
                     when (change.type) {
                         DocumentChange.Type.ADDED, DocumentChange.Type.MODIFIED -> {
                             // Always a Firestore server timestamp, per this file's write path —
                             // never a value any client computed from its own device clock.
                             val remoteUpdatedAt = change.document.getTimestamp("updated_at")?.toDate()?.time ?: 0L
-                            val local = watchlistDao.getBySymbol(symbol)
+                            val local = watchlistDao.getByCoinId(coinId)
                             if (local == null || remoteUpdatedAt >= local.updatedAt) {
                                 watchlistDao.upsertFromRemote(
-                                    symbol = symbol,
+                                    coinId = coinId,
+                                    symbol = change.document.getString("symbol") ?: coinId,
+                                    name = change.document.getString("name"),
+                                    imageUrl = change.document.getString("image_url"),
                                     addedAt = change.document.getLong("added_at") ?: System.currentTimeMillis(),
                                     sortOrder = (change.document.getLong("sort_order") ?: 0L).toInt(),
                                     updatedAt = remoteUpdatedAt,
                                 )
                             }
                         }
-                        DocumentChange.Type.REMOVED -> watchlistDao.delete(symbol)
+                        DocumentChange.Type.REMOVED -> watchlistDao.delete(coinId)
                     }
                 }
                 changeSignal.emit(Unit)
@@ -102,7 +107,7 @@ class FirestoreSyncRepository private constructor(context: Context) {
      * Wipes the local watchlist cache. Call this on sign-out, after [stopListening] and before
      * a different account can sign in on this device — otherwise the previous user's rows stay
      * in SQLite forever, since a fresh account's Firestore collection never emits REMOVED
-     * events for symbols it never had in the first place (there's nothing to "remove"). On the
+     * events for coins it never had in the first place (there's nothing to "remove"). On the
      * next sign-in, [startListening] repopulates the table from that user's own collection, so
      * this is a pure cache invalidation, not a real data loss — Firestore is still the source
      * of truth once online.
@@ -118,33 +123,33 @@ class FirestoreSyncRepository private constructor(context: Context) {
      * background, never gating this call: a slow or offline network must never stall the
      * watchlist toggle (see the FCM-token hang this exact pattern was already adopted for).
      */
-    suspend fun addToWatchlist(uid: String?, symbol: String) {
-        watchlistDao.insert(symbol)
+    suspend fun addToWatchlist(uid: String?, coinId: String, symbol: String, name: String?, imageUrl: String?) {
+        watchlistDao.insert(coinId, symbol, name, imageUrl)
         changeSignal.emit(Unit)
-        if (uid != null) firePushInBackground(uid, symbol)
+        if (uid != null) firePushInBackground(uid, coinId)
     }
 
-    suspend fun removeFromWatchlist(uid: String?, symbol: String) {
-        watchlistDao.delete(symbol)
+    suspend fun removeFromWatchlist(uid: String?, coinId: String) {
+        watchlistDao.delete(coinId)
         changeSignal.emit(Unit)
         if (uid != null) {
             val collection = watchlistCollection(uid)
             CoroutineScope(Dispatchers.IO).launch {
                 withTimeoutOrNull(PUSH_TIMEOUT_MS) {
-                    runCatching { collection.document(symbol).delete().await() }
+                    runCatching { collection.document(coinId).delete().await() }
                 }
             }
         }
     }
 
-    suspend fun reorderWatchlist(uid: String?, orderedSymbols: List<String>) {
-        watchlistDao.updateSortOrders(orderedSymbols)
+    suspend fun reorderWatchlist(uid: String?, orderedCoinIds: List<String>) {
+        watchlistDao.updateSortOrders(orderedCoinIds)
         changeSignal.emit(Unit)
-        if (uid != null) orderedSymbols.forEach { firePushInBackground(uid, it) }
+        if (uid != null) orderedCoinIds.forEach { firePushInBackground(uid, it) }
     }
 
-    private fun firePushInBackground(uid: String, symbol: String) {
-        CoroutineScope(Dispatchers.IO).launch { pushWatchlistItem(uid, symbol) }
+    private fun firePushInBackground(uid: String, coinId: String) {
+        CoroutineScope(Dispatchers.IO).launch { pushWatchlistItem(uid, coinId) }
     }
 
     /**
@@ -155,11 +160,14 @@ class FirestoreSyncRepository private constructor(context: Context) {
      * hanging; Firestore's own offline queue (enabled above) still redelivers the write once
      * connectivity returns, and this same correction runs again on the next successful push.
      */
-    private suspend fun pushWatchlistItem(uid: String, symbol: String) {
-        val entity = watchlistDao.getBySymbol(symbol) ?: return
-        val docRef = watchlistCollection(uid).document(symbol)
+    private suspend fun pushWatchlistItem(uid: String, coinId: String) {
+        val entity = watchlistDao.getByCoinId(coinId) ?: return
+        val docRef = watchlistCollection(uid).document(coinId)
         val data = mapOf(
+            "coin_id" to entity.coinId,
             "symbol" to entity.symbol,
+            "name" to entity.name,
+            "image_url" to entity.imageUrl,
             "added_at" to entity.addedAt,
             "sort_order" to entity.sortOrder,
             "updated_at" to FieldValue.serverTimestamp(),
@@ -175,7 +183,7 @@ class FirestoreSyncRepository private constructor(context: Context) {
 
         // Re-fetch rather than reuse `entity`: the row may have been removed or changed again
         // locally while this push was in flight.
-        watchlistDao.getBySymbol(symbol)?.let { current ->
+        watchlistDao.getByCoinId(coinId)?.let { current ->
             watchlistDao.update(current.copy(updatedAt = resolvedUpdatedAt))
         }
     }

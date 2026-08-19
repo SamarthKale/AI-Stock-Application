@@ -64,6 +64,6 @@ fun ClayAppBar(
 @Composable
 private fun ClayAppBarPreview() {
     ClayTheme {
-        ClayAppBar(title = "Stock Detail", onBack = {}, trailingIcon = Icons.Filled.Notifications, onTrailingClick = {})
+        ClayAppBar(title = "Crypto Detail", onBack = {}, trailingIcon = Icons.Filled.Notifications, onTrailingClick = {})
     }
 }

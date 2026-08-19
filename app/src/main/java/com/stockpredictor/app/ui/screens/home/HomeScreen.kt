@@ -28,13 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.stockpredictor.app.model.Stock
+import com.stockpredictor.app.model.Coin
 import com.stockpredictor.app.ui.components.ClayAppBar
 import com.stockpredictor.app.ui.components.ClayCard
+import com.stockpredictor.app.ui.components.CoinListTile
+import com.stockpredictor.app.ui.components.CoinRankTile
 import com.stockpredictor.app.ui.components.EmptyState
 import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
-import com.stockpredictor.app.ui.components.StockListTile
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClayDimens
@@ -42,7 +43,7 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
 fun HomeScreen(
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
@@ -57,20 +58,20 @@ fun HomeScreen(
         // Notifications has no bottom-nav tab (Task 6), so Home surfaces it here;
         // Settings already has its own tab, so it doesn't need a second entry point.
         ClayAppBar(
-            title = "AI Stock Predictor",
+            title = "AI Crypto Predictor",
             trailingIcon = Icons.Filled.Notifications,
             onTrailingClick = onNotificationsClick,
         )
         when (val s = state) {
             is UiState.Loading -> LoadingState(modifier = Modifier.weight(1f))
             is UiState.Empty -> EmptyState(
-                message = "Your watchlist is empty. Add stocks from Search to see them here.",
+                message = "Your watchlist is empty. Add coins from Search to see them here.",
                 modifier = Modifier.weight(1f),
             )
             is UiState.Error -> ErrorState(message = s.message, onRetry = s.retry, modifier = Modifier.weight(1f))
             is UiState.Success -> HomeContent(
                 data = s.data,
-                onStockClick = onStockClick,
+                onCoinClick = onCoinClick,
                 onSearchClick = onSearchClick,
                 modifier = Modifier.weight(1f),
             )
@@ -81,7 +82,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     data: HomeUiData,
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -95,21 +96,49 @@ private fun HomeContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Search, contentDescription = null, tint = ClayColor.TextSecondary)
                     Spacer(modifier = Modifier.width(ClaySpacing.Sm))
-                    Text("Search stocks…", color = ClayColor.TextSecondary)
+                    Text("Search coins…", color = ClayColor.TextSecondary)
+                }
+            }
+        }
+        if (data.isStale) {
+            item {
+                Text(
+                    "Showing recently cached data — reconnect to refresh.",
+                    color = ClayColor.TextSecondary,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+        if (data.trending.isNotEmpty()) {
+            item {
+                Text("Trending", style = MaterialTheme.typography.titleMedium, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(ClaySpacing.Md)) {
+                    items(data.trending, key = { it.id + "_trending" }) { trending ->
+                        Box(modifier = Modifier.width(ClayDimens.WatchlistTileWidth)) {
+                            CoinRankTile(
+                                symbol = trending.symbol,
+                                name = trending.name,
+                                marketCapRank = trending.marketCapRank,
+                                onClick = { onCoinClick(trending.id) },
+                            )
+                        }
+                    }
                 }
             }
         }
         item {
             Text("Your Watchlist", style = MaterialTheme.typography.titleMedium, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
         }
-        if (data.watchlistStocks.isEmpty()) {
-            item { Text("No stocks in your watchlist yet.", color = ClayColor.TextSecondary) }
+        if (data.watchlistCoins.isEmpty()) {
+            item { Text("No coins in your watchlist yet.", color = ClayColor.TextSecondary) }
         } else {
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(ClaySpacing.Md)) {
-                    items(data.watchlistStocks, key = { it.symbol }) { stock ->
+                    items(data.watchlistCoins, key = { it.id }) { coin ->
                         Box(modifier = Modifier.width(ClayDimens.WatchlistTileWidth)) {
-                            StockListTile(stock = stock, onClick = { onStockClick(stock.symbol) })
+                            CoinListTile(coin = coin, onClick = { onCoinClick(coin.id) })
                         }
                     }
                 }
@@ -118,10 +147,10 @@ private fun HomeContent(
         item {
             Text("Top Movers", style = MaterialTheme.typography.titleMedium, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
         }
-        items(moversList(data), key = { it.symbol + "_mover" }) { stock ->
-            StockListTile(stock = stock, onClick = { onStockClick(stock.symbol) })
+        items(moversList(data), key = { it.id + "_mover" }) { coin ->
+            CoinListTile(coin = coin, onClick = { onCoinClick(coin.id) })
         }
     }
 }
 
-private fun moversList(data: HomeUiData): List<Stock> = data.topGainers + data.topLosers
+private fun moversList(data: HomeUiData): List<Coin> = data.topGainers + data.topLosers

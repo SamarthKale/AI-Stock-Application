@@ -13,9 +13,9 @@ sealed class Destinations(val route: String) {
     data object Search : Destinations("search")
     data object Notifications : Destinations("notifications")
 
-    data object StockDetail : Destinations("stock_detail/{symbol}") {
-        const val ARG_SYMBOL = "symbol"
-        fun createRoute(symbol: String) = "stock_detail/$symbol"
+    data object CryptoDetail : Destinations("crypto_detail/{coinId}") {
+        const val ARG_COIN_ID = "coinId"
+        fun createRoute(coinId: String) = "crypto_detail/$coinId"
     }
 
     companion object {

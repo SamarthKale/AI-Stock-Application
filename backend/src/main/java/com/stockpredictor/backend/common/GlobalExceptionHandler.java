@@ -24,6 +24,12 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.NOT_FOUND.value(), "Not Found", e.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler(PredictionServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handlePredictionServiceUnavailable(PredictionServiceUnavailableException e, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of(HttpStatus.SERVICE_UNAVAILABLE.value(), "Service Unavailable", e.getMessage(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e, HttpServletRequest request) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();

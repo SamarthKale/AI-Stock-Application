@@ -45,7 +45,7 @@ object ClayIconSize {
 object ClayDimens {
     val SpinnerSize: Dp = 20.dp                        // ClayButton loading indicator
     val SpinnerStroke: Dp = 2.dp                        // ClayButton loading indicator stroke
-    val ChartHeight: Dp = 140.dp                        // Stock Detail placeholder price chart
+    val ChartHeight: Dp = 140.dp                        // Crypto Detail placeholder price chart
     val WatchlistTileWidth: Dp = 200.dp                 // Home horizontal watchlist card width
     val ConfidenceBarHeight: Dp = 10.dp                 // PredictionConfidenceBar track height
     val OnboardingDotActive: Dp = 10.dp

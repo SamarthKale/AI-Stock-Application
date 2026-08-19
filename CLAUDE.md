@@ -4,16 +4,40 @@ Guidance for Claude Code when working in this repository.
 
 ## Project
 
-**AI Stock Predictor** — a native Android app (Kotlin/Java) for stock
-analysis and AI-driven price predictions, built in phases starting with a
-fully interactive UI (no backend) and growing into a full production
-system. Phases double as coverage for the CE mobile-computing lab
-practicals — see "Lab Practical Coverage" at the end.
+**AI Crypto Predictor** — a native Android app (Kotlin/Java) for
+cryptocurrency market data and AI-driven price predictions, built in
+phases starting with a fully interactive UI (no backend) and growing
+into a full production system. Phases double as coverage for the CE
+mobile-computing lab practicals — see "Lab Practical Coverage" at the
+end.
 
 > Native Android Studio project (`C:\ADL\appli`, Gradle Kotlin DSL).
-> `applicationId` used below is a placeholder (`com.stockpredictor.app`)
-> — replace with the real one from `app/build.gradle.kts` before Claude
-> Code starts generating files, so packages land in the right place.
+> `applicationId`/`namespace` is `com.stockpredictor.app` and the backend
+> Java package is `com.stockpredictor.backend` — both are **intentionally
+> kept as-is** after the stock→crypto pivot (see "Project History" below)
+> rather than renamed, because Firebase's `google-services.json` is
+> registered against that exact Android package; renaming it would
+> require re-registering the Firebase app and re-downloading config for
+> no functional benefit. Treat these as fixed, internal-only identifiers
+> — every user-facing name, screen, class, and file *within* the app was
+> renamed to the crypto domain (`Coin`, `CryptoDetailScreen`,
+> `CoinRepository`, etc.); only the root package and a couple of
+> deliberately-low-priority internal names (`StockPredictorFcmService`,
+> `StockPredictorApplication`) were left alone as cosmetic debt.
+
+**Project History:** this app was originally built and specced as an
+"AI Stock Predictor" (NSE/BSE stocks via Finnhub/Alpha Vantage/Twelve
+Data). Phases 1 through 3 were built against that spec. Partway through
+Phase 4, the product was pivoted to crypto market data via CoinGecko —
+Phases 1–3's *architecture* (ViewModel/UiState seam, raw-SQLite DAO
+pattern, Firebase Auth/Firestore sync, Spring Boot backend skeleton) all
+carried over unchanged; only the domain (stock→coin) and Phase 4's
+market-data provider changed. This document has been updated in place to
+describe the app as it actually exists today — stock-specific text below
+describes historical phases' original framing only where it's still
+accurate to what was built structurally; concrete class/file names and
+provider references have been updated to match the current crypto
+codebase.
 
 Each phase below is written as a self-contained work order: goal, exact
 files/folders to create or touch, ordered tasks, and a Definition of Done.
@@ -43,19 +67,34 @@ Local device layer:
 Android App
    ↓
 SQLite (raw, via SQLiteOpenHelper/ContentValues — no Room)
-   → Watchlist cache, recent searches, settings, offline predictions cache
+   → Watchlist cache (coin_id-keyed), recent searches, settings,
+     cached_coins + cached_price_history (Phase 4 quote/history cache),
+     offline predictions cache
 ```
 
-Request flow example:
+Request flow, **target end-state** (Spring Boot proxies market data —
+not yet built; see Phase 4's "Current status" for what actually runs
+today):
 
 ```
-Android App → GET /api/stocks/RELIANCE.NS
+Android App → GET /api/coins/bitcoin
             → Spring Boot
-            → Market Data Service (Finnhub / Alpha Vantage / Yahoo Finance)
+            → Market Data Service (CoinGecko)
             → Python AI Service (prediction)
             → Spring Boot (aggregates response)
             → Android App
 ```
+
+Request flow, **as actually implemented today (Phase 4, Steps 1–3)**:
+```
+Android App → CoinGecko directly (Retrofit, Demo-tier API key)
+            → CoinRepository (cache-then-network, SQLite-backed)
+            → Android App
+```
+Android does not yet talk to the Spring Boot backend for market data —
+see Phase 4 below for why, and `CoinDataSource`'s doc comment in code
+for the seam that lets a backend-proxied path replace this later without
+touching ViewModels.
 
 ## Tech Stack
 
@@ -73,22 +112,32 @@ Android App → GET /api/stocks/RELIANCE.NS
 | Chatbot | Dialogflow or an LLM API, behind a thin backend proxy |
 | Maps | Google Maps SDK |
 | Database (backend) | PostgreSQL |
-| Cache (backend) | Redis |
-| Market data | Finnhub / Alpha Vantage / Yahoo Finance |
-| Charts | MPAndroidChart or Compose-native charting (e.g. Vico) |
+| Cache (backend) | Redis — not yet wired (see Phase 4's "Current status": no backend proxy exists yet, so nothing sits in front of it to cache) |
+| Market data | **CoinGecko** (Demo plan — see Phase 4). Historical stock-era candidates (Finnhub, Alpha Vantage, Twelve Data, Yahoo Finance) are no longer applicable — CoinGecko was chosen specifically for crypto coverage after live verification during the migration. |
+| Charts | MPAndroidChart or Compose-native charting (e.g. Vico) — still not wired; Crypto Detail's price chart remains the Phase 1 Canvas placeholder |
 | Deployment | Docker + AWS |
 
 **Rule:** Kotlin/Java app and backend code never touch ML model code.
 Java = application logic and orchestration only. Python = all AI/ML.
 
-## Future AI Reference (Phase 5, not now)
+## Future AI Reference (Phase 5, not started)
 
 [Stock-Market-Probabilities-Deep-Learning by OliverEdholm](https://github.com/OliverEdholm/Stock-Market-Probabilities-Deep-Learning)
-— probability-of-move approach, worth revisiting at Phase 5 to decide if
-predictions should be probability-based rather than a single confidence
-score.
+— probability-of-move approach on *stock* data; the probability-vs-
+single-confidence design question it raises still applies to crypto
+predictions, but this specific repo's dataset assumptions are stock-era
+and should not be assumed compatible with crypto OHLCV data without
+review when Phase 5 actually starts.
 
 Also flagged, not yet reviewed: https://share.google/HWHY4mNdmFRGXecJ9
+
+When Phase 5 starts, re-evaluate the model-source shortlist against
+crypto compatibility specifically (license, activity, runnable
+training code, retraining support, time-series leakage risk, and
+whether the dataset assumptions are stock-only or general OHLCV) rather
+than assuming a stock-focused repo transfers cleanly — crypto's 24/7,
+no-market-holiday trading pattern differs from equities in ways that can
+affect feature engineering (e.g. no weekend gaps to handle specially).
 
 ## Design System — Claymorphism (White Minimalist)
 
@@ -128,6 +177,14 @@ hardcoded hex/dp values inside individual composables/layouts.
 
 ## Phase 1 — UI Only
 
+**STATUS: COMPLETE.** Built against the original stock spec below, then
+carried through the crypto migration — every file/class name mentioned
+in this section has since been renamed to its crypto equivalent
+(`Stock`→`Coin`, `StockListTile`→`CoinListTile`, `stockdetail/`→
+`cryptodetail/`, `MockStocks`→`MockCoins`, etc.); the *architecture*
+(ViewModel/UiState seam, component library, navigation shape) is
+unchanged from what's described here.
+
 **Goal:** every screen fully tappable end-to-end with mock data. No
 network, no DB, no Firebase.
 
@@ -157,7 +214,7 @@ app/src/main/java/com/stockpredictor/app/
     ClayBottomNav.kt
     PriceChangeChip.kt
     PredictionConfidenceBar.kt
-    StockListTile.kt
+    CoinListTile.kt
     LoadingState.kt
     EmptyState.kt
     ErrorState.kt
@@ -167,7 +224,7 @@ app/src/main/java/com/stockpredictor/app/
     auth/SignupScreen.kt
     auth/ForgotPasswordScreen.kt
     home/HomeScreen.kt
-    stockdetail/StockDetailScreen.kt
+    cryptodetail/CryptoDetailScreen.kt
     watchlist/WatchlistScreen.kt
     portfolio/PortfolioScreen.kt
     search/SearchScreen.kt
@@ -175,12 +232,12 @@ app/src/main/java/com/stockpredictor/app/
     notifications/NotificationsScreen.kt
     settings/SettingsScreen.kt
   mock/
-    MockStocks.kt           // sample tickers, prices, history matching future API shape
+    MockCoins.kt           // sample tickers, prices, history matching future API shape
     MockPredictions.kt
     MockPortfolio.kt
     MockNotifications.kt
   model/
-    Stock.kt                // data classes shaped like the eventual API response
+    Coin.kt                 // data classes shaped like the eventual API response
     Prediction.kt
     PortfolioHolding.kt
     WatchlistItem.kt
@@ -194,13 +251,13 @@ app/src/main/java/com/stockpredictor/app/
    previewable via `@Preview`), before any screen uses them.
 3. Define `model/` data classes shaped exactly like the future Spring
    Boot API responses (so Phase 4's swap is a drop-in replacement) —
-   e.g. `Stock(symbol, name, price, change, changePercent, history:
-   List<PricePoint>)`.
+   e.g. `Coin(id, symbol, name, currentPrice, priceChangePercentage24h,
+   history: List<PricePoint>)`.
 4. Populate `mock/` with realistic sample data (10–15 tickers, plausible
    price history, plausible prediction confidences).
 5. Build screens in this order: onboarding → auth (UI-only, local
    validation, `NavHost.navigate()` on submit, no real auth) → home →
-   stock detail → watchlist → portfolio → search → predictions →
+   crypto detail → watchlist → portfolio → search → predictions →
    notifications → settings.
 6. Wire `AppNavHost.kt` with all destinations; bottom nav bar shows Home
    / Watchlist / Predictions / Portfolio / Settings.
@@ -256,12 +313,22 @@ app/src/main/java/com/stockpredictor/app/
   now so Phase 4 just passes a real retry lambda.
 
 *Task 3 — `model/` classes:*
-- `Stock(symbol: String, name: String, exchange: String, price: Double,
-  change: Double, changePercent: Double, history: List<PricePoint>,
-  lastUpdated: Long)` — include `exchange` and `lastUpdated` now even
-  though nothing reads them yet, because the real market-data API
-  (Phase 4) will return them and retrofitting the field later means
-  touching every screen that constructs a `Stock`.
+- **As originally spec'd (stock era):** `Stock(symbol: String, name:
+  String, exchange: String, price: Double, change: Double,
+  changePercent: Double, history: List<PricePoint>, lastUpdated: Long)`.
+- **As it actually exists today**, post-migration: `Coin(id: String,
+  symbol: String, name: String, image: String?, currentPrice: Double,
+  marketCap: Long?, marketCapRank: Int?, totalVolume: Double?, high24h:
+  Double?, low24h: Double?, priceChange24h: Double,
+  priceChangePercentage24h: Double, circulatingSupply/totalSupply/
+  maxSupply: Double?, ath/athChangePercentage/atl/atlChangePercentage:
+  Double?, sparkline7d: List<Double>?, history: List<PricePoint>,
+  description: String?, lastUpdated: Long)` — `id` is the CoinGecko coin
+  id (e.g. `"bitcoin"`) and is the only safe lookup key; `symbol` (e.g.
+  `"BTC"`) is display-only since multiple coins can share a symbol. The
+  stock-era `exchange` field was dropped entirely (no clean crypto
+  analog — CoinGecko coins aren't tied to one exchange); CoinGecko-shaped
+  fields (`marketCap`, `ath`/`atl`, `sparkline7d`, etc.) were added.
 - `Prediction(symbol: String, confidence: Float, direction:
   PredictionDirection, targetPrice: Double?, horizon: String,
   generatedAt: Long)` where `PredictionDirection` is a sealed
@@ -275,10 +342,12 @@ app/src/main/java/com/stockpredictor/app/
   String?)` — `relatedSymbol` enables the Phase 5c deep-link tap target.
 
 *Task 4 — mock data:*
-- Mix sectors/exchanges (NSE and BSE tickers per the eventual
-  `RELIANCE.NS`-style symbols shown in the request-flow diagram above,
-  plus a couple of US tickers) so later UI isn't accidentally tuned to
-  one symbol format.
+- **As it actually exists today:** `MockCoins.kt` uses real, verified
+  CoinGecko coin ids (bitcoin, ethereum, solana, binancecoin, ripple,
+  cardano, dogecoin, polkadot, chainlink, litecoin, avalanche-2, tron) so
+  real API calls in later Phase 4 steps and the mock data stay
+  consistent — never invent a plausible-looking id that doesn't actually
+  resolve on CoinGecko.
 - Include at least one ticker with a flat/near-zero change (tests the
   neutral state of `PriceChangeChip`), one with a long history array
   (tests chart scroll/zoom), and one with a missing/null `targetPrice`
@@ -298,11 +367,11 @@ app/src/main/java/com/stockpredictor/app/
   error states; submit button uses `ClayButton`'s loading state for ~600ms
   fake delay before navigating, so the loading affordance is visually
   verified before any real network exists.
-- **Home:** watchlist summary (horizontal scroll of `StockListTile`/
+- **Home:** watchlist summary (horizontal scroll of `CoinListTile`/
   chip cards), a "movers" section (top gainers/losers from mock data),
   and an entry point into Search. Empty state if the mock watchlist is
   emptied via the debug toggle.
-- **Stock Detail:** header with symbol/name/price/`PriceChangeChip`, a
+- **Crypto Detail:** header with symbol/name/price/`PriceChangeChip`, a
   placeholder chart area (even a simple Compose `Canvas` line plot of
   `history` is enough — do not wire a real charting library yet, that's
   explicitly deferred to whichever phase adds MPAndroidChart/Vico),
@@ -315,7 +384,7 @@ app/src/main/java/com/stockpredictor/app/
   running total value/gain header; empty state for no holdings.
 - **Search:** text field with debounced (client-side, against the mock
   list) filtering, recent-searches chips row, results list reusing
-  `StockListTile`; empty state for "no matches."
+  `CoinListTile`; empty state for "no matches."
 - **Predictions:** list of tickers with `PredictionConfidenceBar`,
   sortable/filterable by confidence or direction (simple client-side
   filter chip row is enough for Phase 1).
@@ -328,11 +397,13 @@ app/src/main/java/com/stockpredictor/app/
 *Task 6 — navigation:*
 - Single-`Activity` + Compose Navigation, not multiple Activities.
 - `Destinations.kt` as a sealed class/interface with typed routes (avoid
-  raw string route concatenation scattered across screens); stock
-  detail's route takes a `symbol` argument.
+  raw string route concatenation scattered across screens); crypto
+  detail's route takes a `coinId` argument (originally `symbol` in the
+  stock-era spec — changed during the migration since a ticker symbol
+  isn't a safe CoinGecko lookup key).
 - Bottom nav is only shown on the 5 top-level destinations (Home,
   Watchlist, Predictions, Portfolio, Settings); Onboarding/Auth/
-  StockDetail/Search/Notifications are pushed on top without bottom nav
+  CryptoDetail/Search/Notifications are pushed on top without bottom nav
   (use a `Scaffold` wrapper that conditionally shows `ClayBottomNav`
   based on the current back-stack entry's route).
 - Back button from any top-level destination should exit the app (or
@@ -387,7 +458,7 @@ app/src/main/java/com/stockpredictor/app/
   comes up (e.g. a disabled-button gray) instead of adding it to
   `ClayTheme.kt` — every color/dimension decision belongs in the theme
   file, even one-offs.
-- Wiring a real charting library in Stock Detail — explicitly deferred;
+- Wiring a real charting library in Crypto Detail — explicitly deferred;
   a simple Canvas line is sufficient and keeps this phase dependency-free.
 - Adding Room, Retrofit, or Firebase Gradle dependencies "to save a step
   later" — the Definition of Done explicitly forbids these imports in
@@ -396,6 +467,13 @@ app/src/main/java/com/stockpredictor/app/
 ---
 
 ## Phase 2 — Local Persistence (SQLite)
+
+**STATUS: COMPLETE**, and extended during the crypto migration: the
+`watchlist` table gained `coin_id`/`name`/`image_url` columns (a real
+`ALTER TABLE` migration, `DB_VERSION` 2→3 — not the recreate-tradeoff
+described below, since real local data existed by then) and Phase 4
+added two more tables (`cached_coins`, `cached_price_history`) following
+the exact DAO/entity/`DbContract` pattern established here.
 
 **Goal:** watchlist, recent searches, settings, and cached predictions
 survive app restarts, via raw SQLite (no Room). Full CRUD.
@@ -438,7 +516,7 @@ app/src/main/java/com/stockpredictor/app/
     - Watchlist add/remove/reorder → `WatchlistDao`
     - Search screen "recent searches" chips → `RecentSearchDao`
     - Settings screen toggles → `SettingsDao`
-    - Stock detail's cached prediction (for offline viewing) →
+    - Crypto detail's cached prediction (for offline viewing) →
       `CachedPredictionDao`
 5. Confirm data survives an app restart (kill + relaunch, check
    watchlist/settings persist).
@@ -513,7 +591,7 @@ app/src/main/java/com/stockpredictor/app/
 
 *Task 5 — persistence verification:*
 - Manual test matrix: add 2+ watchlist items, reorder them, perform 2+
-  searches, toggle a setting, view a stock detail (populating the
+  searches, toggle a setting, view a crypto detail (populating the
   prediction cache) — force-stop the app (not just background it) and
   relaunch, confirming all four survive in the correct state (including
   watchlist order).
@@ -547,6 +625,13 @@ app/src/main/java/com/stockpredictor/app/
 ---
 
 ## Phase 2.5 — Firebase Sync & Auth
+
+**STATUS: COMPLETE**, and updated during the crypto migration:
+`FirestoreSyncRepository`'s watchlist documents are now keyed by
+CoinGecko coin id instead of ticker symbol (`users/{uid}/watchlist/
+{coinId}`), carrying `coin_id`/`symbol`/`name`/`image_url` fields —
+same last-write-wins/server-timestamp design described below, just a
+different document key and a couple more fields.
 
 **Goal:** real authentication + cross-device sync of watchlist/portfolio,
 replacing Phase 1's mock auth screens. FCM channel established for later
@@ -697,6 +782,19 @@ app/src/main/java/com/stockpredictor/app/
 
 ## Phase 3 — Backend Skeleton (Spring Boot)
 
+**STATUS: COMPLETE, and UNTOUCHED by the crypto migration** — the
+backend still runs exactly as built here (`com.stockpredictor.backend`
+package, `StockPredictorApplication.java`, Firebase-token auth,
+watchlist/portfolio/user endpoints against Postgres). Phase 4 was
+implemented as Android calling CoinGecko directly instead of through
+this backend (see Phase 4's "Current status"), so nothing here needed to
+change yet. `watchlist`/`portfolio_holdings`' generic `symbol`/
+`quantity`/`avg_buy_price` columns are crypto-compatible as-is if/when
+Android is later wired to this backend — but note Android's SQLite/
+Firestore watchlist is now keyed by `coin_id`, not `symbol` (Phase 2.5),
+so this backend's schema would need the same treatment before that
+wiring happens, or a symbol-vs-coin-id mismatch will surface then.
+
 **Goal:** a running Spring Boot service Android can eventually call,
 verifying Firebase ID tokens rather than issuing its own — avoids two
 competing auth systems.
@@ -795,7 +893,7 @@ backend/
   `PUT /api/watchlist/reorder` and the equivalent for
   `/api/portfolio` — mirror exactly the operations the Phase 2 DAOs and
   Phase 2.5 Firestore repository already support, since Android's
-  eventual `StockRepository` (Phase 4) needs the same operation set
+  eventual `CoinRepository` (Phase 4) needs the same operation set
   across all three data sources.
 - Return `404` for a watchlist/portfolio item that exists but belongs to
   a different `user_id`, not `403` — this avoids confirming to a caller
@@ -841,10 +939,19 @@ backend/
 
 ---
 
-## Phase 4 — Market Data Integration
+## Phase 4 — Market Data Integration (CoinGecko)
 
-**Goal:** real prices/history flow from a market data provider through
-Spring Boot to the Android app, replacing Phase 1 mock data.
+**STATUS: Steps 1–3 COMPLETE.** This phase's original design (a market
+data provider fronted by the Spring Boot backend, provider TBD between
+Finnhub/Alpha Vantage/Twelve Data, NSE/BSE stock coverage) was
+superseded mid-phase by the stock→crypto product pivot. Everything below
+describes what was **actually built** for CoinGecko, not the original
+stock-provider plan. The three sub-steps below map to the migration's
+own internal step numbering (kept for traceability, not because a "Step
+4" exists elsewhere in this document).
+
+**Goal:** real coin prices/history flow from CoinGecko into the Android
+app, replacing Phase 1 mock data.
 
 **Why this phase matters:** this is the first phase with an external
 third-party dependency (rate-limited, sometimes-down market data APIs)
@@ -852,131 +959,198 @@ in the critical path, so it's also the first phase where the
 loading/empty/error UI states built in Phase 1 stop being decorative and
 start being load-bearing.
 
-**Files to add (Android):**
+**Provider decision (superseding the original Finnhub/Alpha
+Vantage/Twelve Data plan):** Twelve Data was evaluated first (per an
+earlier direction) and rejected after live verification — its free/Demo
+tier excludes full India data entirely (a moot point once the pivot to
+crypto happened, but the same live-verification discipline carried
+through to picking CoinGecko). **CoinGecko, Demo plan**, was chosen and
+verified end-to-end against the real API: base URL
+`https://api.coingecko.com/api/v3/`, auth header `x-cg-demo-api-key`,
+free tier ≈30 calls/min. Endpoints actually used: `/coins/markets`,
+`/coins/{id}`, `/coins/{id}/market_chart`, `/search`,
+`/search/trending`. **`/coins/top_gainers_losers` does not work on the
+Demo tier — confirmed live, returns `401` even with a real key** — so
+gainers/losers are derived client-side by sorting the `/coins/markets`
+batch by `priceChangePercentage24h`, never fetched from that endpoint.
+
+**Files actually added (Android):**
 ```
 app/src/main/java/com/stockpredictor/app/
   data/remote/api/
-    StockApiService.kt        // Retrofit interface
-    RetrofitClient.kt         // OkHttp + Retrofit instance, auth interceptor
-    dto/                       // response DTOs, mapped to model/ classes
+    CoinGeckoApiService.kt       // Retrofit interface: markets, coin detail,
+                                  // market_chart, search, trending
+    RetrofitClient.kt            // OkHttp + Retrofit, key header interceptor,
+                                  // debug-only BASIC-level logging (key header
+                                  // explicitly redacted — see Task 3 below)
+    CoinDataSource.kt            // interface — abstracts "where market data
+                                  // comes from" so a future backend-proxied
+                                  // source can replace direct CoinGecko calls
+    CoinGeckoDirectDataSource.kt // the only impl today: calls CoinGecko directly
+    dto/CoinGeckoDtos.kt         // response DTOs, field-verified against the
+                                  // live API (kotlinx.serialization, snake_case
+                                  // via @SerialName, ignoreUnknownKeys = true)
+    mapper/CoinGeckoMappers.kt   // DTO -> model/ mapping (Coin, CoinSearchResult,
+                                  // TrendingCoin) — ViewModels/composables never
+                                  // see a DTO
   data/repository/
-    StockRepository.kt        // single source of truth: SQLite cache + network, exposes Flow/LiveData
+    CoinRepository.kt            // singleton (getInstance, matching
+                                  // FirestoreSyncRepository's pattern) —
+                                  // cache-then-network against cached_coins/
+                                  // cached_price_history (SQLite, Phase 2),
+                                  // TTL-gated, stale-fallback-on-failure,
+                                  // Mutex-guarded per operation to prevent
+                                  // overlapping calls from racing
+    CoinSearchRepository.kt      // wraps /search only — the one place a coin
+                                  // id is ever resolved from user-typed text,
+                                  // deliberately uncached (query-specific)
+    CoinDataException.kt         // CoinNotFoundException (404) vs.
+                                  // CoinDataUnavailableException (network/5xx/
+                                  // 429) — CancellationException always
+                                  // rethrown, never treated as a real failure
 ```
+**Backend: nothing added.** Android calls CoinGecko directly (see the
+Target Architecture section's "as actually implemented today" diagram)
+— no `crypto/CryptoController.java` or Redis layer exists. This was a
+deliberate, explicit decision for this phase (not an oversight): keep
+the backend decoupled from market data until the direct-from-Android
+path is proven, using `CoinDataSource` as the seam a future
+backend-proxied implementation slots into without touching
+`CoinRepository`, `CoinSearchRepository`, or any ViewModel.
 
-**Ordered tasks:**
-1. Backend: integrate one market data provider first (pick Finnhub or
-   Alpha Vantage — confirm which with the user before building both),
-   add a Redis cache layer in front of it to respect rate limits.
-2. Backend: expose `GET /api/stocks/{symbol}`, `GET /api/stocks/search`,
-   `GET /api/stocks/{symbol}/history` endpoints.
-3. Android: add internet permission, Retrofit + OkHttp setup with an
-   auth interceptor attaching the Firebase ID token.
-4. `StockRepository.kt`: real network calls, replacing `mock/` reads in
-   Home/Search/Stock Detail screens — but keep the same `model/` types
-   so screens barely change.
-5. Replace Phase 1's "mock toggle" loading/empty/error states with real
-   ones driven by actual network conditions (timeout, no results, 200
-   with empty list).
+**Ordered tasks (as executed):**
+1. Android: Retrofit + OkHttp + kotlinx.serialization setup;
+   `BuildConfig.COINGECKO_API_KEY` sourced from `local.properties`
+   (gitignored) via a `Properties()` read in `app/build.gradle.kts`;
+   `buildFeatures.buildConfig = true` enabled.
+2. `CoinRepository`/`CoinSearchRepository`: cache-then-network reads
+   replacing `mock/MockCoins`/`mock/MockPredictions` reads in
+   Home/Search/Watchlist/Crypto Detail ViewModels — Predictions and
+   Portfolio ViewModels were deliberately left on mock data (Predictions
+   stays mock until Phase 5; Portfolio has no live-data phase yet).
+3. Real loading/empty/error states: `ui/state/DebugAwareState.kt` gained
+   a second `debugAwareUiState(realState: Flow<UiState<T>>)` overload
+   (the original only supported debug-forced errors, not real ones —
+   this was a genuine gap in the Phase 1 seam that Phase 4 had to close,
+   not something Phase 1 anticipated correctly) so real network
+   Loading/Success/Empty/Error+retry can flow through the same seam
+   Settings' debug toggle already used.
 
-**Detailed implementation guidance (elaboration on the tasks above):**
+**Detailed implementation guidance (what was actually built, and why):**
 
-*Task 1 — provider integration and caching:*
-- Confirm with the user which provider before writing any code — the
-  two named options have materially different rate limits (Alpha
-  Vantage's free tier is quite restrictive) and response shapes; picking
-  wrong means redoing the backend's market-data client class.
-- Cache raw provider responses in Redis keyed by `symbol` (and a
-  separate key/TTL for `history` vs. current quote, since quotes go
-  stale in seconds but daily history barely changes) — TTL should be
-  short for quotes (e.g. 15–60s) and long for history (e.g. hours), and
-  both should be tunable via `application.yml`, not hardcoded.
-- On a provider rate-limit or outage response, serve the last cached
-  value past its TTL rather than propagating the failure, and mark the
-  response as stale (e.g. an `isStale: true` field) so the DTO can
-  communicate that to Android instead of silently lying about freshness.
+*Provider key handling — an intentional deviation from the general
+secrets rule below:* the CoinGecko Demo key is compiled into the APK via
+`BuildConfig.COINGECKO_API_KEY`, **not** kept server-side-only. This is
+a deliberate exception to Working Conventions' "never in the Android app
+for server-side-only keys" rule, made explicitly because CoinGecko's
+Demo tier is designed for client-side use (low privilege, ~30 calls/min,
+easily rotated) — unlike the market-data keys that rule was originally
+written for. The key still goes through the same `local.properties` /
+`BuildConfig` seam as every other secret (never hardcoded, never
+committed, never logged — `RetrofitClient`'s debug logging interceptor
+is capped at `Level.BASIC` and explicitly calls `redactHeader()` on the
+key header as defense in depth). If/when a backend proxy is built (see
+"Backend: nothing added" above), route the key through the backend's
+environment config instead and this client-side exception goes away.
 
-*Task 2 — endpoints:*
-- `GET /api/stocks/{symbol}` returns the current quote shaped like
-  Android's `Stock` model (symbol, name, price, change, changePercent).
-- `GET /api/stocks/search?q=...` proxies/filters the provider's symbol
-  search (or a locally cached symbol list, if the provider's search is
-  rate-limited separately from quotes) and returns a lightweight result
-  list (symbol, name, exchange) — not full quotes, to keep search fast.
-- `GET /api/stocks/{symbol}/history?range=...` returns `List<PricePoint>`
-  matching Phase 1's `Stock.history` shape; support at least a couple of
-  ranges (e.g. `1M`, `6M`) since Stock Detail's chart will want a range
-  selector eventually even if Phase 1's placeholder chart didn't have
-  one.
+*Caching design actually implemented:*
+- SQLite (`cached_coins`, `cached_price_history` — Phase 2's tables,
+  added during migration) is the durable offline cache; `CoinRepository`
+  checks freshness before ever calling network.
+- TTLs (constants in `CoinRepository.kt`, not hardcoded inline): markets
+  list 60s, coin detail 120s, price history 6h, trending 5 minutes
+  (trending has no SQLite table — it's ephemeral discovery content
+  cached only in-memory on the `CoinRepository` singleton).
+- On network failure, serve the SQLite/in-memory cache past its TTL
+  rather than propagating the failure, with an `isStale: Boolean` flag
+  threaded into each screen's UI-data class (e.g. `HomeUiData.isStale`)
+  so the UI can show "showing recently cached data" instead of silently
+  lying about freshness — same design intent as the original
+  Redis-`isStale`-field plan, just implemented client-side since there's
+  no backend layer yet.
+- **Both the general market list and per-id batched lookups (e.g. the
+  watchlist's `ids=` query) are TTL-gated the same way** — this was a
+  defect found in an early audit (only the general list was gated
+  originally, so watchlist/trending re-fetched on every screen
+  re-entry) and fixed: `getMarkets()` now checks freshness for both
+  `ids == null` and `ids != null` calls before deciding network is
+  needed.
+- `CoinRepository` and its markets/detail/trending operations are each
+  guarded by a `Mutex` (coarse-grained, one per operation type) so
+  overlapping calls (e.g. a ViewModel's init-triggered load racing its
+  screen's first `LaunchedEffect`, or Home's concurrent
+  watchlist/general-list/trending fetches) coalesce instead of racing
+  each other or corrupting the in-memory trending cache. Every
+  `catch (e: Exception)` in this data path explicitly rethrows
+  `CancellationException` first — a cancelled (superseded) fetch must
+  never be treated as "the network call failed."
+- Each Home-tab/Watchlist-tab ViewModel keeps a `refreshJob: Job?` and
+  cancels the previous one before launching a new `refresh()` — combined
+  with removing the redundant `init { refresh() }` call (the screen's
+  own `LaunchedEffect(Unit)` already triggers the initial load; calling
+  it from both `init` and the first composition used to double-fire on
+  cold start).
 
-*Task 3 — Android networking setup:*
-- `RetrofitClient.kt`: a single `OkHttpClient` with an `Authenticator`
-  or `Interceptor` that attaches the current Firebase ID token
-  (`FirebaseAuth.getInstance().currentUser?.getIdToken(false)`) as a
-  Bearer header — tokens expire, so use the non-forcing `getIdToken`
-  call in the common path and only force-refresh on a `401` retry, to
-  avoid refreshing on every single request.
-- Add reasonable timeouts (connect/read/write, e.g. 10s) and a single
-  retry-with-backoff for idempotent `GET` calls only — never auto-retry
-  write operations without idempotency handling.
-- `AndroidManifest.xml` needs the `INTERNET` permission — trivial, but
-  the Definition of Done for Phase 1 explicitly forbade any networking
-  import, so this is the first phase where it's added.
+*Search (`CoinSearchRepository`):* `/search` is the only endpoint a
+raw user-typed query is ever sent to, per the hard rule "never guess a
+coin id from a ticker symbol" — search results (`CoinSearchResult`: id,
+symbol, name, image, market cap rank) intentionally carry no price data
+(CoinGecko's `/search` doesn't return any), so `SearchScreen` uses a
+dedicated lightweight `CoinRankTile` component instead of the
+price-carrying `CoinListTile`. Debounced 300ms via `collectLatest`
+(cancels a superseded in-flight search rather than racing it).
 
-*Task 4 — `StockRepository.kt`:*
-- Repository pattern: expose `Flow<UiState<Stock>>` or similar, first
-  emitting the SQLite-cached value (if any, from Phase 2's
-  `CachedPredictionDao`/watchlist cache) immediately for instant
-  perceived load, then emitting the network result when it arrives, then
-  updating the cache — this "cache-then-network" pattern is what makes
-  the app feel fast on slow connections and usable briefly offline.
-- Map network DTOs (`data/remote/api/dto/`) to the shared `model/` types
-  in one place (a `mapper` file or extension functions) — screens and
-  ViewModels only ever see `model/` types, never DTOs directly, exactly
-  as Phase 1 designed.
-- Search results and history requests do not need the cache-then-network
-  treatment (they're not the "always show something instantly" case the
-  way a watched stock's price is) — decide per-endpoint whether caching
-  applies rather than applying it uniformly.
-
-*Task 5 — real loading/empty/error states:*
-- Map specific failure conditions to the existing `ErrorState`
-  component: no connectivity (before making the call, check
-  `ConnectivityManager` or just handle the resulting `IOException`),
-  request timeout, `401` (token expired and refresh also failed — this
-  should route to re-login, not just show a generic error), and
-  `5xx`/unexpected — each can share the same `ErrorState` composable but
-  should pass a distinct, specific message and retry action.
-- A `200` with an empty list (e.g. search with no matches) is `Empty`,
-  not `Error` — make sure the repository/ViewModel distinguishes "call
-  succeeded, no data" from "call failed" when mapping to `UiState`.
+*Error handling verified against the live API:* `/simple/price`/
+`/search` with an unmatched query returns `200` with an empty result
+(`{"coins":[]}`), not an HTTP error — this is treated as `UiState.Empty`,
+never `UiState.Error`. An unknown coin id on `/coins/{id}` returns `404`
+→ `CoinNotFoundException` → `UiState.Empty` (not a whole-screen error,
+since "this specific coin doesn't exist" isn't the same failure mode as
+"CoinGecko is unreachable"). `429`/`5xx`/timeout all map to
+`CoinDataUnavailableException` with a user-facing message and a retry
+callback wired to the ViewModel's own refresh function.
 
 **Definition of Done:**
-- Home, Search, and Stock Detail show real, live prices for at least a
-  handful of real tickers.
+- Home, Search, Watchlist, and Crypto Detail show real, live CoinGecko
+  data — confirmed working end-to-end.
 - Loading/empty/error states trigger from real conditions, not a debug
-  switch.
-- No `mock/` data reachable from these three screens anymore (mock/
-  stays for Predictions until Phase 5).
+  switch — confirmed (real `UiState.Error` with retry, real `Empty` for
+  unmatched search/unknown coin id).
+- No `mock/` data reachable from Home/Search/Watchlist/Crypto Detail
+  anymore (`mock/` stays for Predictions/Portfolio, which have no
+  live-data phase yet).
 
 **Additional acceptance criteria:**
 - Turning off the device's network mid-session and reopening a
-  previously-viewed stock shows the last cached price (marked stale, if
-  the backend's staleness flag is wired through) rather than a bare
-  error.
-- Exhausting the market-data provider's rate limit on the backend
-  results in Android still receiving a (possibly stale) response, not a
-  cascading `5xx`.
-- A forced-expired Firebase token triggers exactly one refresh attempt
-  and, on refresh failure, routes the user back to Login rather than
-  looping or crashing.
-- Search-as-you-type is debounced (e.g. 300ms) so it doesn't fire a
-  network call per keystroke.
+  previously-viewed coin shows the last cached price, marked stale —
+  implemented, code-reviewed; not device-verified (no emulator/device
+  available in the environment this was built in — flag this as an open
+  manual-QA item, not a completed check).
+- Exhausting CoinGecko's rate limit does not cascade into a crash or
+  unhandled error — implemented via the exception hierarchy above;
+  same device-verification caveat as above.
+- Repeated Home/Watchlist re-entry within the TTL window does not
+  re-hit the network — implemented and traced through the code by hand
+  (Home→Detail→Back→Home, Watchlist tab re-entry); same
+  device-verification caveat.
+- Search-as-you-type is debounced (300ms) — implemented.
 
-**Common pitfalls for Claude Code to avoid in this phase:**
-- Calling `getIdToken(true)` (force refresh) on every request — this
-  needlessly hits Firebase's token endpoint on every API call and can
-  itself become a rate-limit/perf problem; force-refresh only on a `401`
-  retry.
+**Common pitfalls for Claude Code to avoid in this phase (updated for
+what was actually learned building this):**
+- Assuming a market-data provider's free/Demo tier supports every
+  endpoint you plan to use — verify live, per-endpoint, before
+  designing around it. `/coins/top_gainers_losers` looked plausible from
+  documentation alone but 401'd on Demo tier in practice.
+- Building a cache-then-network TTL check for only the "obvious" call
+  (a general/unfiltered list) and assuming batched/filtered variants of
+  the same underlying data don't need the same treatment — they do, and
+  skipping it silently reintroduces the exact redundant-refetch problem
+  the TTL was built to prevent.
+- Catching a bare `Exception` in a coroutine that might be cancelled
+  (e.g. by `Job.cancel()` or `collectLatest` superseding it) without
+  rethrowing `CancellationException` first — this lets a cancelled,
+  superseded operation still mutate shared UI state after a newer one
+  has already produced the correct result.
 - Letting DTO types leak into ViewModels or composables — the mapper
   layer exists specifically so Phase 1's screens don't need to change
   when the data source changes.
@@ -1016,9 +1190,9 @@ ai-service/
    faster to get end-to-end working than LSTM/GRU).
 3. `POST /predict` endpoint: symbol + history in, prediction out.
 4. Spring Boot calls this service and aggregates the result into the
-   existing `/api/stocks/{symbol}` response (add a `prediction` field).
-5. Android: `StockRepository` picks up the new field; Predictions tab
-   and Stock Detail's prediction card switch from `mock/` to real data.
+   existing `/api/coins/{id}` response (add a `prediction` field).
+5. Android: `CoinRepository` picks up the new field; Predictions tab
+   and Crypto Detail's prediction card switch from `mock/` to real data.
 
 **Detailed implementation guidance (elaboration on the tasks above):**
 
@@ -1074,25 +1248,25 @@ ai-service/
   to the market-data provider directly — this keeps the "Java =
   orchestration, Python = AI/ML" rule intact and avoids two independent
   integrations with the same external provider.
-- If the AI service is down or times out, `/api/stocks/{symbol}` should
+- If the AI service is down or times out, `/api/coins/{id}` should
   still return the quote data with `prediction: null` rather than
   failing the whole request — predictions are additive, not
   load-bearing, for the core quote-viewing experience.
 
 *Task 5 — Android wiring:*
-- `Prediction` field on `Stock`/the stock-detail response becomes
-  nullable-aware in the UI: Stock Detail's `PredictionConfidenceBar`
+- `Prediction` field on `Coin`/the crypto-detail response becomes
+  nullable-aware in the UI: Crypto Detail's `PredictionConfidenceBar`
   section should show its own small empty/error state (not the whole
   screen's `ErrorState`) when `prediction` is null, consistent with
   Task 4's backend behavior.
 - Predictions tab switches its list source from `mock/PredictionMocks`
-  to `StockRepository`, reusing the same cache-then-network pattern from
+  to `CoinRepository`, reusing the same cache-then-network pattern from
   Phase 4 if predictions are also cached (recommended, since model
   inference is more expensive than a quote lookup — consider caching
   predictions in Redis on the backend with a longer TTL than quotes).
 
 **Definition of Done:**
-- Predictions tab and Stock Detail prediction card show real model
+- Predictions tab and Crypto Detail prediction card show real model
   output for at least one ticker end-to-end (Android → Spring Boot →
   FastAPI → back).
 - `mock/PredictionMocks.kt` no longer referenced anywhere in shipped
@@ -1102,7 +1276,7 @@ ai-service/
 - The train/validation split for the first model is time-based, and the
   split methodology is documented in a comment or short README in
   `ai-service/`.
-- Killing the AI service and requesting `/api/stocks/{symbol}` from
+- Killing the AI service and requesting `/api/coins/{id}` from
   Spring Boot still returns a `200` with quote data and `prediction:
   null`, not a `5xx`.
 - The FastAPI service loads its model artifact once at startup
@@ -1119,7 +1293,7 @@ ai-service/
   simple math" — per the Tech Stack rule, all AI/ML logic (including
   feature engineering) stays in Python.
 - Making the `/predict` call synchronously block the main
-  `/api/stocks/{symbol}` response with no timeout — always bound how
+  `/api/coins/{id}` response with no timeout — always bound how
   long Spring Boot waits on the AI service before falling back to
   `prediction: null`.
 
@@ -1249,15 +1423,34 @@ backend (Spring Boot):
 
 ## Phase 5c — Maps, Multimedia & AI Notifications
 
-**Goal:** Global Exchanges Map, audio market briefing, AI-triggered push
-notifications — using the FCM channel from Phase 2.5.
+**NEEDS RE-SCOPING BEFORE STARTING — crypto markets don't have "exchange
+hours."** This phase's core premise (`ExchangeData`'s
+`openLocalTime`/`closeLocalTime` + a live open/closed badge, mirroring
+NYSE/NASDAQ/LSE/NSE/BSE/TSE trading hours) assumes stock-market-style
+scheduled trading. Crypto trades 24/7 across every exchange, with no
+weekday/holiday closures — the open/closed concept simply doesn't apply.
+**Confirm the actual replacement concept with the user before building
+any of this phase** rather than assuming a direct swap; plausible
+alternatives (not yet decided, do not build speculatively): a map of
+major crypto exchange headquarters/regional trading-volume distribution
+instead of open/closed status, or dropping the map's "closed" state
+entirely and showing live regional volume share instead. The
+audio-briefing and alert-rule-evaluator tasks below are otherwise
+unaffected by the pivot (they already operate on watchlist/prediction
+data generically) — only `ExchangeData`/`ExchangeMapScreen`'s specific
+open/closed-hours concept needs a decision first.
+
+**Goal:** Global Exchanges Map (concept TBD — see above), audio market
+briefing, AI-triggered push notifications — using the FCM channel from
+Phase 2.5.
 
 **Why this phase matters:** this phase closes the loop opened in Phase
 2.5 — the FCM channel that was only "receive and display" now gets real
 server-driven rules behind it, and this is the phase most likely to
 touch device permissions (location isn't needed for the map since
 exchanges are static data, but notifications and TTS both have their own
-platform quirks) and real-world timezone/DST correctness.
+platform quirks) and real-world timezone/DST correctness (if the
+open/closed concept survives re-scoping in some form).
 
 **Files to add:**
 ```
@@ -1282,10 +1475,11 @@ backend (Spring Boot):
 4. `MarketBriefingSpeaker.kt`: TTS read-out of today's top
    predictions/watchlist movers — a "play briefing" button on Home.
 5. Backend `AlertRuleService`: evaluates simple rules (prediction
-   confidence crosses threshold, watchlist stock moves >X% intraday) on
+   confidence crosses threshold, watchlist coin moves >X% intraday) on
    a schedule, sends FCM pushes to registered tokens.
-6. Android: `StockPredictorFcmService` (from Phase 2.5) now has real
-   alerts to display, tapping one deep-links to that stock's detail
+6. Android: `StockPredictorFcmService` (from Phase 2.5 — real class name,
+   kept as-is per this doc's "Project History" note) now has real
+   alerts to display, tapping one deep-links to that coin's detail
    screen.
 
 **Detailed implementation guidance (elaboration on the tasks above):**
@@ -1329,8 +1523,8 @@ backend (Spring Boot):
   a common source of silently-dropped audio.
 - Compose the briefing text server-side-free, purely from already-loaded
   watchlist + prediction data (no new network call needed for the
-  briefing itself) — e.g. "Your watchlist: Reliance up two percent,
-  Infosys down one percent. Top prediction: TCS, seventy percent
+  briefing itself) — e.g. "Your watchlist: Bitcoin up two percent,
+  Ethereum down one percent. Top prediction: Solana, seventy percent
   confidence upward." Keep numbers rounded and sentence structure simple
   for TTS clarity.
 - Expose `stop()` alongside `speak()` and call it on screen
@@ -1344,7 +1538,7 @@ backend (Spring Boot):
   (and spending FCM sends) outside trading hours).
 - Rule set for this phase, explicitly scoped simple per the task:
   prediction confidence crosses a configurable threshold, or a
-  watchlist stock's intraday change exceeds a configurable percentage —
+  watchlist coin's intraday change exceeds a configurable percentage —
   both thresholds should be config values (`application.yml`), not
   hardcoded, so they can be "manually lowered temporarily" per the
   Definition of Done's test instruction without a code change.
@@ -1355,13 +1549,14 @@ backend (Spring Boot):
 - Send via the Firebase Admin SDK's messaging API to each user's
   registered token(s) from Phase 2.5's `users/{uid}/fcmToken`, including
   a data payload (not just a display notification) carrying the target
-  `symbol` so Android can deep-link.
+  `coinId` so Android can deep-link (not `symbol` — matches the coin-id
+  keying used throughout the rest of the app since the migration).
 
 *Task 6 — Android alert handling:*
 - Extend `StockPredictorFcmService.onMessageReceived` to read the
-  `symbol` from the data payload and construct a deep-linking
+  `coinId` from the data payload and construct a deep-linking
   `PendingIntent` that navigates directly to
-  `StockDetailScreen(symbol)` via `AppNavHost`'s typed route (Phase 1),
+  `CryptoDetailScreen(coinId)` via `AppNavHost`'s typed route (Phase 1),
   rather than just opening `MainActivity` with no destination.
 - Handle both foreground (app open — show as an in-app
   `NotificationItem` via the existing Notifications tab / `mock/`-turned
@@ -1386,7 +1581,7 @@ backend (Spring Boot):
 - Rapidly triggering the same alert condition twice within the cooldown
   window results in only one push being sent.
 - Tapping a received alert notification while the app is fully killed
-  (not just backgrounded) still lands on the correct `StockDetailScreen`.
+  (not just backgrounded) still lands on the correct `CryptoDetailScreen`.
 
 **Common pitfalls for Claude Code to avoid in this phase:**
 - Manual UTC-offset math for exchange open/closed status instead of
@@ -1419,7 +1614,7 @@ documented tradeoffs as it is new work.
    ML + chatbot data handling; link it from Settings and (if applicable)
    the Play Store listing.
 5. "Not investment advice" disclaimer surfaced in the UI wherever
-   predictions are shown (Stock Detail, Predictions tab) — an ethics/
+   predictions are shown (Crypto Detail, Predictions tab) — an ethics/
    legal necessity given the AI prediction and chatbot features.
 6. Dockerize backend services (Spring Boot, FastAPI); docker-compose for
    local dev; deploy target AWS (ECS/Fargate or EC2 + RDS + ElastiCache).
@@ -1432,7 +1627,7 @@ documented tradeoffs as it is new work.
   are renamed), Firestore's `@PropertyName`-mapped model classes, and
   any TF Lite model-loading reflection paths (ML Kit/TF Lite interpreter
   classes commonly need explicit keep rules) — verify by running a full
-  release build and exercising login, watchlist sync, a stock detail
+  release build and exercising login, watchlist sync, a crypto detail
   view, and the on-device classifier, not just by checking the build
   succeeds (obfuscation bugs are runtime failures, not compile
   failures).
@@ -1455,7 +1650,7 @@ documented tradeoffs as it is new work.
 - Add the Crashlytics Gradle plugin + dependency, confirm a forced test
   crash (`Crashlytics` has a documented test-crash method) appears in
   the Firebase console within a few minutes.
-- Attach non-PII breadcrumb logging (e.g. "entered StockDetailScreen for
+- Attach non-PII breadcrumb logging (e.g. "entered CryptoDetailScreen for
   symbol X", "sync conflict resolved for watchlist item Y") at a few key
   points across the phases already built, so a real crash report has
   useful context without logging anything privacy-sensitive.
@@ -1474,7 +1669,7 @@ documented tradeoffs as it is new work.
 *Task 5 — disclaimer:*
 - Persistent, clearly-legible placement (not a one-time dismissible
   dialog) wherever a `PredictionConfidenceBar`/prediction value is shown
-  — Stock Detail's prediction card and every row in the Predictions tab
+  — Crypto Detail's prediction card and every row in the Predictions tab
   — short, plain text (e.g. "Predictions are for informational purposes
   only and are not investment advice") styled with `text-secondary`,
   consistent with the Design System rather than an alarming red banner.
@@ -1511,7 +1706,7 @@ documented tradeoffs as it is new work.
 - `docker-compose up` brings up backend + AI service + Postgres + Redis
   locally with no manual post-start steps beyond running migrations.
 - The "not investment advice" disclaimer and privacy-policy link are
-  reachable within two taps from both Stock Detail and Predictions tab.
+  reachable within two taps from both Crypto Detail and Predictions tab.
 
 **Common pitfalls for Claude Code to avoid in this phase:**
 - Treating this phase as "just add ProGuard and sign it" — the bulk of
@@ -1547,6 +1742,14 @@ documented tradeoffs as it is new work.
   goes in `local.properties` / a non-committed secrets file or the
   backend's environment config — never hardcoded, never in the Android
   app for server-side-only keys (chatbot/LLM, market data provider).
+  **Documented exception:** the CoinGecko Demo-tier market-data key
+  (Phase 4) is deliberately compiled into the Android app via
+  `BuildConfig.COINGECKO_API_KEY`, still sourced only from
+  `local.properties` — CoinGecko's Demo tier is designed for client-side
+  use (low privilege, easily rotated, ~30 calls/min), unlike the
+  server-side-only keys this rule otherwise targets. See Phase 4's
+  "Provider key handling" note for the full reasoning and the condition
+  under which this exception should be revisited (a future backend proxy).
 - Backend DTOs and Android `model/` classes should be kept in matching
   shape — when one changes, check the other.
 

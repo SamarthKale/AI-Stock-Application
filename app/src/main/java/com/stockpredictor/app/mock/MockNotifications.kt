@@ -7,26 +7,26 @@ object MockNotifications {
         NotificationItem(
             id = 1,
             title = "Prediction confidence rising",
-            body = "RELIANCE.NS prediction confidence crossed 80%.",
+            body = "Bitcoin prediction confidence crossed 80%.",
             timestamp = System.currentTimeMillis() - 1_800_000,
             isRead = false,
-            relatedSymbol = "RELIANCE.NS"
+            relatedSymbol = "bitcoin"
         ),
         NotificationItem(
             id = 2,
             title = "Price alert",
-            body = "TATASTEEL.BO is up 2.66% today.",
+            body = "XRP is up 3.29% today.",
             timestamp = System.currentTimeMillis() - 3_600_000,
             isRead = false,
-            relatedSymbol = "TATASTEEL.BO"
+            relatedSymbol = "ripple"
         ),
         NotificationItem(
             id = 3,
             title = "Watchlist update",
-            body = "ICICIBANK.NS 30-day prediction is now bullish.",
+            body = "Dogecoin 30-day prediction is now bullish.",
             timestamp = System.currentTimeMillis() - 7_200_000,
             isRead = true,
-            relatedSymbol = "ICICIBANK.NS"
+            relatedSymbol = "dogecoin"
         ),
         NotificationItem(
             id = 4,
@@ -39,10 +39,10 @@ object MockNotifications {
         NotificationItem(
             id = 5,
             title = "Price alert",
-            body = "WIPRO.BO dropped below your watch threshold.",
+            body = "Litecoin dropped below your watch threshold.",
             timestamp = System.currentTimeMillis() - 172_800_000,
             isRead = false,
-            relatedSymbol = "WIPRO.BO"
+            relatedSymbol = "litecoin"
         ),
         NotificationItem(
             id = 6,

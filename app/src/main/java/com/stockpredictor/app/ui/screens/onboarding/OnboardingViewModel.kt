@@ -10,7 +10,7 @@ data class OnboardingSlide(val title: String, val body: String)
 private val defaultSlides = listOf(
     OnboardingSlide(
         title = "Track every market",
-        body = "Watch NSE, BSE, and global tickers side by side, updated the moment you open the app.",
+        body = "Watch Bitcoin, Ethereum, and thousands of coins side by side, updated the moment you open the app.",
     ),
     OnboardingSlide(
         title = "AI-driven predictions",

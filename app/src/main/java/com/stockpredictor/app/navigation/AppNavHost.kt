@@ -30,7 +30,7 @@ import com.stockpredictor.app.ui.screens.portfolio.PortfolioScreen
 import com.stockpredictor.app.ui.screens.predictions.PredictionsScreen
 import com.stockpredictor.app.ui.screens.search.SearchScreen
 import com.stockpredictor.app.ui.screens.settings.SettingsScreen
-import com.stockpredictor.app.ui.screens.stockdetail.StockDetailScreen
+import com.stockpredictor.app.ui.screens.cryptodetail.CryptoDetailScreen
 import com.stockpredictor.app.ui.screens.watchlist.WatchlistScreen
 import com.stockpredictor.app.ui.theme.ClayColor
 
@@ -115,19 +115,19 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
             composable(Destinations.Home.route) {
                 HomeScreen(
-                    onStockClick = { symbol -> navController.navigate(Destinations.StockDetail.createRoute(symbol)) },
+                    onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) },
                     onSearchClick = { navController.navigate(Destinations.Search.route) },
                     onNotificationsClick = { navController.navigate(Destinations.Notifications.route) },
                 )
             }
             composable(Destinations.Watchlist.route) {
-                WatchlistScreen(onStockClick = { symbol -> navController.navigate(Destinations.StockDetail.createRoute(symbol)) })
+                WatchlistScreen(onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) })
             }
             composable(Destinations.Predictions.route) {
-                PredictionsScreen(onStockClick = { symbol -> navController.navigate(Destinations.StockDetail.createRoute(symbol)) })
+                PredictionsScreen(onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) })
             }
             composable(Destinations.Portfolio.route) {
-                PortfolioScreen(onStockClick = { symbol -> navController.navigate(Destinations.StockDetail.createRoute(symbol)) })
+                PortfolioScreen(onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) })
             }
             composable(Destinations.Settings.route) {
                 SettingsScreen(
@@ -141,18 +141,18 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             composable(Destinations.Search.route) {
                 SearchScreen(
                     onBack = { navController.popBackStack() },
-                    onStockClick = { symbol -> navController.navigate(Destinations.StockDetail.createRoute(symbol)) },
+                    onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) },
                 )
             }
             composable(Destinations.Notifications.route) {
                 NotificationsScreen(onBack = { navController.popBackStack() })
             }
             composable(
-                route = Destinations.StockDetail.route,
-                arguments = listOf(navArgument(Destinations.StockDetail.ARG_SYMBOL) { type = NavType.StringType }),
+                route = Destinations.CryptoDetail.route,
+                arguments = listOf(navArgument(Destinations.CryptoDetail.ARG_COIN_ID) { type = NavType.StringType }),
             ) { entry ->
-                val symbol = entry.arguments?.getString(Destinations.StockDetail.ARG_SYMBOL).orEmpty()
-                StockDetailScreen(symbol = symbol, onBack = { navController.popBackStack() })
+                val coinId = entry.arguments?.getString(Destinations.CryptoDetail.ARG_COIN_ID).orEmpty()
+                CryptoDetailScreen(coinId = coinId, onBack = { navController.popBackStack() })
             }
         }
     }

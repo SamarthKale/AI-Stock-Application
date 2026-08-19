@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 5: the Spring Boot backend runs over plain HTTP in local dev (no TLS cert for a
+  localhost/emulator-host address). Cleartext is allowed ONLY for that specific address —
+  CoinGecko, Firebase, and everything else the app talks to still requires HTTPS, since this
+  is a scoped domain-config, not a blanket android:usesCleartextTraffic="true" for the whole app.
+  10.0.2.2 is the standard Android emulator alias for the host machine's localhost.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

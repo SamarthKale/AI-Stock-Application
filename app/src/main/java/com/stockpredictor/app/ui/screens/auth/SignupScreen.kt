@@ -63,7 +63,7 @@ fun SignupScreen(
                 .padding(horizontal = ClaySpacing.Lg)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Join AI Stock Predictor", style = MaterialTheme.typography.titleLarge, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
+            Text("Join AI Crypto Predictor", style = MaterialTheme.typography.titleLarge, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(ClaySpacing.Xl))
             ClayTextField(value = formState.fullName, onValueChange = viewModel::onFullNameChange, label = "Full name", errorText = formState.fullNameError)
             Spacer(modifier = Modifier.height(ClaySpacing.Md))

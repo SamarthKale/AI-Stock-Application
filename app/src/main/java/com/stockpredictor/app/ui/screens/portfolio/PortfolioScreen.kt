@@ -35,7 +35,7 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 
 @Composable
 fun PortfolioScreen(
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     viewModel: PortfolioViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,7 +48,7 @@ fun PortfolioScreen(
             is UiState.Error -> ErrorState(message = s.message, onRetry = s.retry, modifier = Modifier.weight(1f))
             is UiState.Success -> PortfolioContent(
                 data = s.data,
-                onStockClick = onStockClick,
+                onCoinClick = { symbol -> viewModel.resolveCoinId(symbol)?.let(onCoinClick) },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -58,7 +58,7 @@ fun PortfolioScreen(
 @Composable
 private fun PortfolioContent(
     data: PortfolioUiData,
-    onStockClick: (String) -> Unit,
+    onCoinClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -73,7 +73,7 @@ private fun PortfolioContent(
                     Spacer(modifier = Modifier.height(ClaySpacing.Xs))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "₹${String.format("%.2f", data.totalValue)}",
+                            text = "$${String.format("%.2f", data.totalValue)}",
                             color = ClayColor.TextPrimary,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
@@ -85,7 +85,7 @@ private fun PortfolioContent(
             }
         }
         items(data.holdings, key = { it.symbol }) { holding ->
-            HoldingRow(holding = holding, onClick = { onStockClick(holding.symbol) })
+            HoldingRow(holding = holding, onClick = { onCoinClick(holding.symbol) })
         }
     }
 }
@@ -97,14 +97,14 @@ private fun HoldingRow(holding: PortfolioHolding, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(holding.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "${holding.quantity.toInt()} shares @ ₹${String.format("%.2f", holding.avgBuyPrice)}",
+                    text = "${formatQuantity(holding.quantity)} holdings @ $${String.format("%.2f", holding.avgBuyPrice)}",
                     color = ClayColor.TextSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "₹${String.format("%.2f", holding.currentValue)}",
+                    text = "$${String.format("%.2f", holding.currentValue)}",
                     color = ClayColor.TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -114,3 +114,8 @@ private fun HoldingRow(holding: PortfolioHolding, onClick: () -> Unit) {
         }
     }
 }
+
+/** Crypto quantities are commonly fractional (e.g. 0.42 BTC) unlike whole stock shares —
+ *  trims trailing zeros rather than truncating to an int. */
+private fun formatQuantity(quantity: Double): String =
+    String.format("%.4f", quantity).trimEnd('0').trimEnd('.')
