@@ -12,8 +12,11 @@ import com.stockpredictor.app.data.repository.CoinNotFoundException
 import com.stockpredictor.app.data.repository.CoinRepository
 import com.stockpredictor.app.data.repository.PredictionRepository
 import com.stockpredictor.app.data.repository.toUserMessage
+import com.stockpredictor.app.ml.MomentumResult
+import com.stockpredictor.app.ml.OnDeviceMomentumClassifier
 import com.stockpredictor.app.model.Coin
 import com.stockpredictor.app.model.Prediction
+import com.stockpredictor.app.model.PricePoint
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.state.debugAwareUiState
 import kotlinx.coroutines.CancellationException
@@ -27,6 +30,7 @@ import kotlinx.coroutines.launch
 data class CryptoDetailData(
     val coin: Coin,
     val prediction: Prediction?,
+    val momentum: MomentumResult?,
     val isInWatchlist: Boolean,
 )
 
@@ -40,6 +44,11 @@ data class CryptoDetailData(
  * additive, not load-bearing (per Phase 4/5's design) — [_prediction] just stays null and
  * CryptoDetailScreen's existing small, scoped "no prediction available" state handles it,
  * rather than surfacing a whole-screen error for a secondary card.
+ *
+ * [_momentum] (Phase 5b) is the on-device, offline-only counterpart: computed by
+ * [OnDeviceMomentumClassifier] from the same [Coin.history] this screen already has once the coin
+ * loads — no separate fetch, no network call, and a null result (not enough cached history, or
+ * classification failure) is handled the same additive, non-blocking way as a null [_prediction].
  */
 class CryptoDetailViewModel(
     application: Application,
@@ -50,18 +59,20 @@ class CryptoDetailViewModel(
     private val authRepository = FirebaseAuthRepository()
     private val coinRepository = CoinRepository.getInstance(application)
     private val predictionRepository = PredictionRepository(application)
+    private val momentumClassifier = OnDeviceMomentumClassifier.getInstance(application)
 
     private val _coinState = MutableStateFlow<UiState<Coin>>(UiState.Loading)
     private val _prediction = MutableStateFlow<Prediction?>(null)
+    private val _momentum = MutableStateFlow<MomentumResult?>(null)
     private val _isInWatchlist = MutableStateFlow(false)
 
     val uiState: StateFlow<UiState<CryptoDetailData>> = debugAwareUiState(
-        combine(_coinState, _prediction, _isInWatchlist) { coinState, prediction, inWatchlist ->
+        combine(_coinState, _prediction, _momentum, _isInWatchlist) { coinState, prediction, momentum, inWatchlist ->
             when (coinState) {
                 is UiState.Loading -> UiState.Loading
                 is UiState.Empty -> UiState.Empty
                 is UiState.Error -> coinState
-                is UiState.Success -> UiState.Success(CryptoDetailData(coinState.data, prediction, inWatchlist))
+                is UiState.Success -> UiState.Success(CryptoDetailData(coinState.data, prediction, momentum, inWatchlist))
             }
         },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
@@ -80,12 +91,25 @@ class CryptoDetailViewModel(
             try {
                 val result = coinRepository.getCoinDetail(coinId)
                 _coinState.value = UiState.Success(result.data)
+                classifyMomentum(result.data.history)
             } catch (e: CoinNotFoundException) {
                 _coinState.value = UiState.Empty
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 _coinState.value = UiState.Error(e.toUserMessage(), ::fetchCoin)
+            }
+        }
+    }
+
+    private fun classifyMomentum(history: List<PricePoint>) {
+        viewModelScope.launch {
+            _momentum.value = try {
+                momentumClassifier.classify(history)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
             }
         }
     }

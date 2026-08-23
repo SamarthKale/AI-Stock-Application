@@ -42,6 +42,7 @@ import java.util.Date
 @Composable
 fun NotificationsScreen(
     onBack: () -> Unit,
+    onCoinClick: (String) -> Unit = {},
     viewModel: NotificationsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,7 +59,15 @@ fun NotificationsScreen(
                 verticalArrangement = Arrangement.spacedBy(ClaySpacing.Md),
             ) {
                 items(s.data, key = { it.id }) { notification ->
-                    NotificationRow(notification = notification, onClick = { viewModel.markRead(notification.id) })
+                    NotificationRow(
+                        notification = notification,
+                        onClick = {
+                            viewModel.markRead(notification.id)
+                            // Phase 5c: relatedSymbol is coin-id-valued (see NotificationItem's
+                            // doc history) -- tapping a real alert navigates straight to that coin.
+                            notification.relatedSymbol?.let(onCoinClick)
+                        },
+                    )
                 }
             }
         }

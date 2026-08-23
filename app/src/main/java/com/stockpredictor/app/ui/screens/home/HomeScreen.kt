@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.model.Coin
 import com.stockpredictor.app.ui.components.ClayAppBar
+import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayCard
 import com.stockpredictor.app.ui.components.CoinListTile
 import com.stockpredictor.app.ui.components.CoinRankTile
@@ -54,6 +56,9 @@ fun HomeScreen(
     // switches but this composable doesn't, so re-query on each entry to this tab.
     LaunchedEffect(Unit) { viewModel.refresh() }
 
+    // Phase 5c: leaving Home mid-briefing must not leave audio playing over the next screen.
+    DisposableEffect(Unit) { onDispose { viewModel.stopBriefing() } }
+
     Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
         // Notifications has no bottom-nav tab (Task 6), so Home surfaces it here;
         // Settings already has its own tab, so it doesn't need a second entry point.
@@ -73,6 +78,7 @@ fun HomeScreen(
                 data = s.data,
                 onCoinClick = onCoinClick,
                 onSearchClick = onSearchClick,
+                onPlayBriefing = viewModel::playBriefing,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -84,6 +90,7 @@ private fun HomeContent(
     data: HomeUiData,
     onCoinClick: (String) -> Unit,
     onSearchClick: () -> Unit,
+    onPlayBriefing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -99,6 +106,11 @@ private fun HomeContent(
                     Text("Search coins…", color = ClayColor.TextSecondary)
                 }
             }
+        }
+        item {
+            // Phase 5c: TTS read-out of the watchlist/prediction data this screen already
+            // loaded -- no new fetch triggered by tapping this.
+            ClayButton(text = "Play Briefing", onClick = onPlayBriefing, modifier = Modifier.fillMaxWidth())
         }
         if (data.isStale) {
             item {

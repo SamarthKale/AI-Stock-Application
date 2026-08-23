@@ -28,6 +28,38 @@ prediction-service:
   base-url: ${PREDICTION_SERVICE_URL:http://localhost:8000}
   cache-ttl-minutes: ${PREDICTION_CACHE_TTL_MINUTES:20}
 
+# Phase 5b: Gemini chatbot proxy. api-key is env-only (no literal default, matching
+# DB_PASSWORD's pattern) -- never committed, never sent to Android (GeminiChatbotClient is the
+# only place it's read). model has no fixed default baked into code -- Gemini's free-tier model
+# lineup changes over time, so it's set here, externally overridable via GEMINI_MODEL.
+# rate-limit-per-hour is ChatbotRateLimiter's per-uid cap -- the DoD's required cost-control
+# measure for an endpoint proxying a metered, paid third-party API.
+chatbot:
+  base-url: https://generativelanguage.googleapis.com
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  rate-limit-per-hour: ${CHATBOT_RATE_LIMIT_PER_HOUR:20}
+
+# Phase 5c: CoinGecko market-data client, used only by AlertRuleService (the backend's first-ever
+# market-data integration -- deliberately added because a server-scheduled alert job has no other
+# way to know current prices; see the Phase 5c plan). Reuses the same Demo-tier key Android
+# already uses -- fine at this project's scale (one low-frequency scheduled job, well within the
+# ~30 calls/min budget), sourced via env var, never committed.
+coingecko:
+  base-url: https://api.coingecko.com/api/v3
+  api-key: ${COINGECKO_API_KEY:}
+
+# Phase 5c: AI-driven FCM alerts. No "market hours" gating (crypto trades 24/7) -- interval-minutes
+# is a plain continuous cadence, config-driven so it can be "manually lowered temporarily" for
+# demoing (same DoD instruction CLAUDE.md's stock-era spec used for thresholds). Neither threshold
+# is hardcoded in code.
+alerts:
+  enabled: ${ALERTS_ENABLED:true}
+  interval-minutes: ${ALERTS_INTERVAL_MINUTES:10}
+  price-move-threshold-pct: ${ALERTS_PRICE_MOVE_THRESHOLD_PCT:5.0}
+  confidence-threshold: ${ALERTS_CONFIDENCE_THRESHOLD:70.0}
+  cooldown-minutes: ${ALERTS_COOLDOWN_MINUTES:60}
+
 server:
   port: ${SERVER_PORT:8080}
   error:

@@ -7,13 +7,15 @@ import android.database.sqlite.SQLiteOpenHelper
 import com.stockpredictor.app.data.local.DbContract.CachedCoinTable
 import com.stockpredictor.app.data.local.DbContract.CachedPredictionTable
 import com.stockpredictor.app.data.local.DbContract.CachedPriceHistoryTable
+import com.stockpredictor.app.data.local.DbContract.ChatMessageTable
+import com.stockpredictor.app.data.local.DbContract.NotificationTable
 import com.stockpredictor.app.data.local.DbContract.RecentSearchTable
 import com.stockpredictor.app.data.local.DbContract.SettingsTable
 import com.stockpredictor.app.data.local.DbContract.WatchlistTable
 import com.stockpredictor.app.mock.MockCoins
 
 private const val DB_NAME = "stockpredictor.db"
-private const val DB_VERSION = 3 // v3 (Crypto Predictor migration): watchlist becomes coin-keyed, adds cached_coins/cached_price_history
+private const val DB_VERSION = 5 // v5 (Phase 5c): adds notifications for real AI-alert history
 
 /**
  * Raw [SQLiteOpenHelper] — no Room. Reserves an `_id` PRIMARY KEY on every table even
@@ -74,6 +76,8 @@ class AppDatabaseHelper private constructor(context: Context) :
         )
         createCachedCoinsTable(db)
         createCachedPriceHistoryTable(db)
+        createChatMessagesTable(db)
+        createNotificationsTable(db)
         seedDefaultWatchlist(db)
     }
 
@@ -123,6 +127,35 @@ class AppDatabaseHelper private constructor(context: Context) :
         )
     }
 
+    private fun createChatMessagesTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE ${ChatMessageTable.NAME} (
+                ${ChatMessageTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${ChatMessageTable.COL_CONVERSATION_ID} TEXT NOT NULL,
+                ${ChatMessageTable.COL_ROLE} TEXT NOT NULL,
+                ${ChatMessageTable.COL_CONTENT} TEXT NOT NULL,
+                ${ChatMessageTable.COL_TIMESTAMP} INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+    }
+
+    private fun createNotificationsTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE ${NotificationTable.NAME} (
+                ${NotificationTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${NotificationTable.COL_TITLE} TEXT NOT NULL,
+                ${NotificationTable.COL_BODY} TEXT NOT NULL,
+                ${NotificationTable.COL_TIMESTAMP} INTEGER NOT NULL,
+                ${NotificationTable.COL_IS_READ} INTEGER NOT NULL DEFAULT 0,
+                ${NotificationTable.COL_RELATED_COIN_ID} TEXT
+            )
+            """.trimIndent(),
+        )
+    }
+
     /**
      * Fresh installs start with the same first-5-coins watchlist Phase 1's in-memory
      * seed used, so first-run UX is unchanged now that the table is the real source of
@@ -154,6 +187,10 @@ class AppDatabaseHelper private constructor(context: Context) :
      * CoinGecko equivalent to migrate to — but recent_searches/settings/cached_predictions are
      * left untouched. Must be replaced with real per-column ALTER TABLE migrations (as done
      * here) rather than any further blanket recreate, now that real user data exists.
+     *
+     * v3→v4 (Phase 5b) and v4→v5 (Phase 5c) follow the same additive-migration discipline:
+     * chat_messages/notifications are each a brand new table, so both are plain CREATE TABLEs
+     * with no data loss to any existing table.
      */
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 3) {
@@ -164,6 +201,12 @@ class AppDatabaseHelper private constructor(context: Context) :
             createCachedCoinsTable(db)
             createCachedPriceHistoryTable(db)
             seedDefaultWatchlist(db)
+        }
+        if (oldVersion < 4) {
+            createChatMessagesTable(db)
+        }
+        if (oldVersion < 5) {
+            createNotificationsTable(db)
         }
     }
 

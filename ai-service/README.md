@@ -132,9 +132,14 @@ Android (already has cached history via CoinRepository)
   <--PredictionResponseDto-- Android (PredictionRepository, writes CachedPredictionDao)
 ```
 
-Model loaded once at FastAPI startup (`main.py`), never per-request. LSTM/GRU
-(`models/lstm_model.py`) is a stub/interface only in Phase 5, per the plan —
-XGBoost is the only trained model this phase.
+Model loaded once at FastAPI startup, via `main.py`'s `lifespan` async context
+manager, which calls `models/xgboost_model.py`'s `load()` before the app
+starts accepting requests -- never lazily on the first `/predict` call, and
+never reloaded on subsequent requests (`load()`/`predict()` both reuse the
+same in-memory cache). If the trained artifact is missing or corrupt,
+startup fails with a clear exception rather than the service coming up in a
+broken state. LSTM/GRU (`models/lstm_model.py`) is a stub/interface only in
+Phase 5, per the plan — XGBoost is the only trained model this phase.
 
 ## Running locally
 

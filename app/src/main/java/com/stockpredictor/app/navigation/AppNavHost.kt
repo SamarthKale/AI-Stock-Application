@@ -1,6 +1,7 @@
 package com.stockpredictor.app.navigation
 
 import android.app.Application
+import android.content.Intent
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,12 +18,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
 import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.ui.components.ClayBottomNav
 import com.stockpredictor.app.ui.screens.auth.ForgotPasswordScreen
 import com.stockpredictor.app.ui.screens.auth.LoginScreen
 import com.stockpredictor.app.ui.screens.auth.SignupScreen
+import com.stockpredictor.app.ui.screens.chatbot.ChatbotScreen
+import com.stockpredictor.app.ui.screens.exchangemap.ExchangeMapScreen
 import com.stockpredictor.app.ui.screens.home.HomeScreen
 import com.stockpredictor.app.ui.screens.notifications.NotificationsScreen
 import com.stockpredictor.app.ui.screens.onboarding.OnboardingScreen
@@ -35,10 +39,20 @@ import com.stockpredictor.app.ui.screens.watchlist.WatchlistScreen
 import com.stockpredictor.app.ui.theme.ClayColor
 
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(
+    navController: NavHostController = rememberNavController(),
+    deepLinkIntent: Intent? = null,
+) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val context = LocalContext.current
+
+    // Phase 5c: pushes an alert-notification deep link (stockpredictor://crypto_detail/{coinId})
+    // into the graph — covers both cold start (MainActivity.onCreate) and already-running
+    // (onNewIntent) cases uniformly, since MainActivity always routes through this same state.
+    LaunchedEffect(deepLinkIntent) {
+        deepLinkIntent?.let { navController.handleDeepLink(it) }
+    }
 
     // A session persists across cold starts (Firebase Auth's own local storage), so a
     // returning signed-in user skips Onboarding/Login straight to Home. Computed once at
@@ -136,7 +150,15 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                             popUpTo(0) { inclusive = true }
                         }
                     },
+                    onNavigateToChatbot = { navController.navigate(Destinations.Chatbot.route) },
+                    onNavigateToExchangeMap = { navController.navigate(Destinations.ExchangeMap.route) },
                 )
+            }
+            composable(Destinations.Chatbot.route) {
+                ChatbotScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destinations.ExchangeMap.route) {
+                ExchangeMapScreen(onBack = { navController.popBackStack() })
             }
             composable(Destinations.Search.route) {
                 SearchScreen(
@@ -145,11 +167,18 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 )
             }
             composable(Destinations.Notifications.route) {
-                NotificationsScreen(onBack = { navController.popBackStack() })
+                NotificationsScreen(
+                    onBack = { navController.popBackStack() },
+                    onCoinClick = { coinId -> navController.navigate(Destinations.CryptoDetail.createRoute(coinId)) },
+                )
             }
             composable(
                 route = Destinations.CryptoDetail.route,
                 arguments = listOf(navArgument(Destinations.CryptoDetail.ARG_COIN_ID) { type = NavType.StringType }),
+                // Phase 5c: lets an alert-notification PendingIntent (built by
+                // StockPredictorFcmService as a plain ACTION_VIEW Intent) land directly on this
+                // screen — see MainActivity/AppNavHost's deepLinkIntent handling above.
+                deepLinks = listOf(navDeepLink { uriPattern = "stockpredictor://crypto_detail/{coinId}" }),
             ) { entry ->
                 val coinId = entry.arguments?.getString(Destinations.CryptoDetail.ARG_COIN_ID).orEmpty()
                 CryptoDetailScreen(coinId = coinId, onBack = { navController.popBackStack() })

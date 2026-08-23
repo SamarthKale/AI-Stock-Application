@@ -1,5 +1,15 @@
-"""Loads the trained XGBoost artifact once (module import time) and exposes a
-single predict() function -- never retrained or reloaded per request."""
+"""Loads the trained XGBoost artifact once and exposes a single predict()
+function -- never retrained per request.
+
+Loading happens eagerly, once, at FastAPI startup: main.py's lifespan calls
+load() directly before the app starts serving requests (Phase 5 DoD --
+"FastAPI loads its model artifact once at startup, not per-request"). load()
+is idempotent (a cache-hit on `_artifact` short-circuits before touching
+disk), so this is the same single cache/loading mechanism used everywhere --
+main.py's startup call, a direct unit-test call, and predict()'s own internal
+call all resolve to "read the file once, then reuse the in-memory artifact,"
+never a second independent loading path.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +27,19 @@ ARTIFACT_PATH = Path(__file__).resolve().parent.parent / "artifacts" / "xgboost_
 _artifact: Optional[dict] = None
 
 
-def _load() -> dict:
+def load() -> dict:
+    """Loads the trained artifact from disk into the module-level cache, if not
+    already cached, and returns it. Called once by main.py's FastAPI startup
+    (lifespan) -- meant to run exactly once per process before any request is
+    served. Idempotent: a second call (e.g. from predict()'s own internal
+    reference, or a test fixture) is a plain cache read, not a re-read of the
+    file, so calling this from more than one place never causes a reload.
+
+    Raises FileNotFoundError if the artifact is missing, or propagates whatever
+    joblib.load() raises if the file exists but is corrupt -- either way, the
+    caller (main.py's lifespan) lets this exception abort FastAPI startup
+    rather than starting the service in a broken, unpredictable state.
+    """
     global _artifact
     if _artifact is None:
         if not ARTIFACT_PATH.exists():
@@ -29,7 +51,10 @@ def _load() -> dict:
 
 
 def is_ready() -> bool:
-    return ARTIFACT_PATH.exists()
+    """True once load() has successfully populated the in-memory cache -- reflects
+    actual load state (not just file existence), so /health's model_ready field
+    means what it says: the model is loaded and predict() will not hit disk."""
+    return _artifact is not None
 
 
 def min_required_points() -> int:
@@ -40,7 +65,7 @@ def predict(coin_id: str, history: list[dict], btc_history: list[dict]) -> dict:
     """history/btc_history: list of {"timestamp": int, "price": float, "volume": float},
     ascending by timestamp. Returns {"confidence": float 0-100, "direction": "UP"|"DOWN"|"FLAT",
     "targetPrice": float}. Raises ValueError if there isn't enough history to compute features."""
-    artifact = _load()
+    artifact = load()
 
     if len(history) < min_required_points():
         raise ValueError(

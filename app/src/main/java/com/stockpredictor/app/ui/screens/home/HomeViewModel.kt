@@ -3,14 +3,18 @@ package com.stockpredictor.app.ui.screens.home
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.stockpredictor.app.audio.MarketBriefingSpeaker
+import com.stockpredictor.app.data.local.dao.CachedPredictionDao
 import com.stockpredictor.app.data.local.dao.WatchlistDao
 import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
 import com.stockpredictor.app.data.repository.CoinRepository
 import com.stockpredictor.app.data.repository.toUserMessage
 import com.stockpredictor.app.model.Coin
+import com.stockpredictor.app.model.PredictionDirection
 import com.stockpredictor.app.model.TrendingCoin
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.state.debugAwareUiState
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -37,6 +41,8 @@ data class HomeUiData(
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = WatchlistDao(application)
     private val coinRepository = CoinRepository.getInstance(application)
+    private val cachedPredictionDao = CachedPredictionDao(application)
+    private val briefingSpeaker = MarketBriefingSpeaker(application)
 
     private val _realState = MutableStateFlow<UiState<HomeUiData>>(UiState.Loading)
     val uiState: StateFlow<UiState<HomeUiData>> = debugAwareUiState(_realState)
@@ -109,5 +115,54 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _realState.value = UiState.Error(e.toUserMessage(), ::refresh)
             }
         }
+    }
+
+    /**
+     * Phase 5c audio briefing. Composed entirely from [HomeUiData] (already loaded by [refresh])
+     * plus [CachedPredictionDao] (Phase 2's local prediction cache, already populated by whatever
+     * coins have been viewed elsewhere in the app) -- no new network call. Honest by construction:
+     * if no watchlist coin has a cached prediction, the prediction line is simply omitted rather
+     * than claiming one exists (mirrors the backend AlertRuleService's same documented limitation
+     * -- not every coin has an active cached prediction).
+     */
+    fun playBriefing() {
+        viewModelScope.launch {
+            val data = (_realState.value as? UiState.Success)?.data
+            briefingSpeaker.speak(buildBriefingText(data))
+        }
+    }
+
+    fun stopBriefing() {
+        briefingSpeaker.stop()
+    }
+
+    private suspend fun buildBriefingText(data: HomeUiData?): String {
+        if (data == null || data.watchlistCoins.isEmpty()) {
+            return "Your watchlist is empty. No movers to report."
+        }
+        val movers = data.watchlistCoins.joinToString(separator = ". ") { coin ->
+            val direction = if (coin.priceChangePercentage24h >= 0.0) "up" else "down"
+            "${coin.name} $direction ${kotlin.math.abs(coin.priceChangePercentage24h).roundToInt()} percent"
+        }
+
+        val topPrediction = data.watchlistCoins
+            .mapNotNull { coin -> cachedPredictionDao.getBySymbol(coin.id)?.let { coin to it } }
+            .maxByOrNull { (_, prediction) -> prediction.confidence }
+
+        val predictionLine = topPrediction?.let { (coin, prediction) ->
+            val directionWord = when (prediction.direction) {
+                PredictionDirection.Up -> "upward"
+                PredictionDirection.Down -> "downward"
+                PredictionDirection.Flat -> "flat"
+            }
+            " Top prediction: ${coin.name}, ${prediction.confidence.roundToInt()} percent confidence $directionWord."
+        }.orEmpty()
+
+        return "Your watchlist: $movers.$predictionLine"
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        briefingSpeaker.shutdown()
     }
 }

@@ -88,4 +88,28 @@ object DbContract {
         const val COL_POINTS_JSON = "points_json"
         const val COL_CACHED_AT = "cached_at"
     }
+
+    /** Phase 5b — local chat history for the "Ask AI" assistant. The backend chatbot proxy is
+     *  stateless; this table is the only place a conversation is persisted. */
+    object ChatMessageTable {
+        const val NAME = "chat_messages"
+        const val COL_ID = "_id"
+        const val COL_CONVERSATION_ID = "conversation_id"
+        const val COL_ROLE = "role"
+        const val COL_CONTENT = "content"
+        const val COL_TIMESTAMP = "timestamp"
+    }
+
+    /** Phase 5c — real alert-push history, replacing mock/MockNotifications.kt. The backend
+     *  AlertRuleService is stateless (per Phase 5c's design); this table is the only place a
+     *  received alert is persisted, populated by StockPredictorFcmService.onMessageReceived. */
+    object NotificationTable {
+        const val NAME = "notifications"
+        const val COL_ID = "_id"
+        const val COL_TITLE = "title"
+        const val COL_BODY = "body"
+        const val COL_TIMESTAMP = "timestamp"
+        const val COL_IS_READ = "is_read"
+        const val COL_RELATED_COIN_ID = "related_coin_id"
+    }
 }

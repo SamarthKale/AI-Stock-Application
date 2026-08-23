@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -22,12 +23,16 @@ fun ClayCard(
     modifier: Modifier = Modifier,
     shape: Shape = ClayShapes.Medium,
     padding: Dp = ClaySpacing.Lg,
+    // Phase 5b: lets chat bubbles (ChatbotScreen) tint the user vs. assistant variant
+    // differently while still going through the shared clay shadow/shape/padding — every other
+    // existing call site keeps the default ClayBase fill unchanged.
+    backgroundColor: Color = ClayColor.ClayBase,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
         modifier = modifier
             .clayShadow(shape = shape)
-            .background(color = ClayColor.ClayBase, shape = shape)
+            .background(color = backgroundColor, shape = shape)
             .padding(padding),
         content = content,
     )

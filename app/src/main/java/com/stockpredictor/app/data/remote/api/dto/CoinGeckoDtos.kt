@@ -104,6 +104,17 @@ data class TrendingCoinItemDto(
  *  raw two-element number arrays, not objects, hence List<List<Double>> rather than a data class.
  *  [totalVolumes] added in Phase 5 for feature engineering (ai-service needs a volume series,
  *  not just price); harmless to keep fetching even for screens that only chart price. */
+/** Phase 5c exchange map -- live-verified fields (no lat/lng; country is a registered
+ *  jurisdiction, not a trading-floor location, since crypto exchanges are online-only). */
+@Serializable
+data class ExchangeDto(
+    val id: String,
+    val name: String,
+    val country: String? = null,
+    @SerialName("trust_score") val trustScore: Int? = null,
+    @SerialName("trade_volume_24h_btc") val tradeVolume24hBtc: Double? = null,
+)
+
 @Serializable
 data class MarketChartResponseDto(
     val prices: List<List<Double>> = emptyList(),

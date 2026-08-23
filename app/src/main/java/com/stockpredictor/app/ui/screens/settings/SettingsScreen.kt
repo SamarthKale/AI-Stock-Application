@@ -36,6 +36,8 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 @Composable
 fun SettingsScreen(
     onLogout: () -> Unit,
+    onNavigateToChatbot: () -> Unit = {},
+    onNavigateToExchangeMap: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +73,36 @@ fun SettingsScreen(
             item {
                 SettingsSection(title = "About") {
                     Text("AI Crypto Predictor · v1.0 (Phase 1)", color = ClayColor.TextSecondary)
+                }
+            }
+            item {
+                SettingsSection(title = "Assistant") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text("Ask AI", color = ClayColor.TextPrimary)
+                            Text("Chat with an AI assistant about crypto", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                        ClayButton(text = "Open", onClick = onNavigateToChatbot, variant = ClayButtonVariant.Secondary)
+                    }
+                }
+            }
+            item {
+                SettingsSection(title = "Markets") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text("Exchange Map", color = ClayColor.TextPrimary)
+                            Text("Major exchanges by live 24h volume", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                        ClayButton(text = "Open", onClick = onNavigateToExchangeMap, variant = ClayButtonVariant.Secondary)
+                    }
                 }
             }
             item {

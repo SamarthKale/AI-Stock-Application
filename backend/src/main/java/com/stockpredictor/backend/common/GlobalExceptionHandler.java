@@ -30,6 +30,18 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.SERVICE_UNAVAILABLE.value(), "Service Unavailable", e.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler(ChatbotServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleChatbotServiceUnavailable(ChatbotServiceUnavailableException e, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of(HttpStatus.SERVICE_UNAVAILABLE.value(), "Service Unavailable", e.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(ChatbotRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleChatbotRateLimitExceeded(ChatbotRateLimitExceededException e, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", e.getMessage(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e, HttpServletRequest request) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();

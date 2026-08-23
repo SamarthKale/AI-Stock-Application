@@ -24,7 +24,18 @@ data class PredictionResponseDto(
     val generatedAt: Long,
 )
 
+// Phase 5b: field names match ChatMessageRequestDto/ChatMessageResponseDto's Java records exactly,
+// same reasoning as the prediction DTOs above.
+@Serializable
+data class ChatMessageRequest(val conversationId: String, val message: String)
+
+@Serializable
+data class ChatMessageResponseDto(val reply: String, val conversationId: String)
+
 interface BackendApiService {
     @POST("api/predictions/{coinId}")
     suspend fun predict(@Path("coinId") coinId: String, @Body request: PredictionHistoryRequest): PredictionResponseDto
+
+    @POST("api/chatbot/message")
+    suspend fun sendChatMessage(@Body request: ChatMessageRequest): ChatMessageResponseDto
 }

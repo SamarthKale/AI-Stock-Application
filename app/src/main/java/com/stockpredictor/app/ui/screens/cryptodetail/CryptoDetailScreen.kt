@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stockpredictor.app.ml.MomentumResult
+import com.stockpredictor.app.ml.MomentumTag
 import com.stockpredictor.app.model.Prediction
 import com.stockpredictor.app.model.PredictionDirection
 import com.stockpredictor.app.model.PricePoint
@@ -97,6 +99,8 @@ private fun CryptoDetailContent(
         Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         PredictionSection(prediction = data.prediction)
         Spacer(modifier = Modifier.height(ClaySpacing.Lg))
+        MomentumSection(momentum = data.momentum)
+        Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         ClayButton(
             text = if (data.isInWatchlist) "Remove from Watchlist" else "Add to Watchlist",
             onClick = onToggleWatchlist,
@@ -129,6 +133,52 @@ private fun PredictionSection(prediction: Prediction?) {
                     Spacer(modifier = Modifier.height(ClaySpacing.Sm))
                     Text("Target: ${String.format("%.2f", prediction.targetPrice)}", color = ClayColor.TextPrimary)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Phase 5b's on-device momentum tag — deliberately shown as its own small card, separate from
+ * [PredictionSection], and captioned "On-device (offline)" so it's never mistaken for the Phase 5
+ * server AI Prediction above it. Honest caveat text is shown by design, not omitted: validation
+ * (ai-service/artifacts/momentum_training_report.json) found only a marginal edge over a naive
+ * majority-class baseline, so this reads as a weak, best-effort local signal rather than a
+ * confident call — matching the plan's explicit instruction not to present this feature as more
+ * useful than it measured out to be.
+ */
+@Composable
+private fun MomentumSection(momentum: MomentumResult?) {
+    ClayCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("On-Device Momentum", color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(ClaySpacing.Xs))
+            Text(
+                "Computed on this device from cached price history — works offline, separate from the AI Prediction above.",
+                color = ClayColor.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+            if (momentum == null) {
+                Text("Not enough cached history yet for a momentum tag.", color = ClayColor.TextSecondary)
+            } else {
+                val (label, color) = when (momentum.tag) {
+                    MomentumTag.BULLISH -> "Bullish" to ClayColor.AccentMint
+                    MomentumTag.BEARISH -> "Bearish" to ClayColor.AccentCoral
+                    MomentumTag.NEUTRAL -> "Neutral" to ClayColor.TextSecondary
+                }
+                Text(
+                    "$label · ${String.format("%.0f", momentum.confidence)}% confidence",
+                    color = color,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(ClaySpacing.Xs))
+                Text(
+                    "Experimental — validation showed only a weak signal beyond a naive baseline. Not investment advice.",
+                    color = ClayColor.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }

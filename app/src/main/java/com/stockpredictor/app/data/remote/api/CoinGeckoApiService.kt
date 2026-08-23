@@ -3,6 +3,7 @@ package com.stockpredictor.app.data.remote.api
 import com.stockpredictor.app.data.remote.api.dto.CoinDetailDto
 import com.stockpredictor.app.data.remote.api.dto.CoinMarketDto
 import com.stockpredictor.app.data.remote.api.dto.CoinSearchResponseDto
+import com.stockpredictor.app.data.remote.api.dto.ExchangeDto
 import com.stockpredictor.app.data.remote.api.dto.MarketChartResponseDto
 import com.stockpredictor.app.data.remote.api.dto.TrendingResponseDto
 import retrofit2.http.GET
@@ -47,4 +48,12 @@ interface CoinGeckoApiService {
 
     @GET("search/trending")
     suspend fun getTrending(): TrendingResponseDto
+
+    // Phase 5c: exchange map. Live-verified fields (no lat/lng -- ExchangeData.kt supplies a
+    // static location per exchange, joined with this live volume/trust data).
+    @GET("exchanges")
+    suspend fun getExchanges(
+        @Query("per_page") perPage: Int = 100,
+        @Query("page") page: Int = 1,
+    ): List<ExchangeDto>
 }

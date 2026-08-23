@@ -1,26 +1,51 @@
 package com.stockpredictor.app.ui.screens.notifications
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.stockpredictor.app.mock.MockNotifications
+import com.stockpredictor.app.data.local.dao.NotificationDao
+import com.stockpredictor.app.data.repository.toUserMessage
 import com.stockpredictor.app.model.NotificationItem
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.state.debugAwareUiState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class NotificationsViewModel : ViewModel() {
-    private val _items = MutableStateFlow(MockNotifications.all)
+/** Phase 5c: real alert history from [NotificationDao] (populated by
+ *  StockPredictorFcmService.onMessageReceived), replacing mock/MockNotifications.kt. */
+class NotificationsViewModel(application: Application) : AndroidViewModel(application) {
+    private val dao = NotificationDao(application)
 
-    val uiState: StateFlow<UiState<List<NotificationItem>>> = debugAwareUiState(
-        dataFlow = _items,
-        isEmpty = { it.isEmpty() },
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    private val _realState = MutableStateFlow<UiState<List<NotificationItem>>>(UiState.Loading)
+    val uiState: StateFlow<UiState<List<NotificationItem>>> = debugAwareUiState(_realState)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _realState.value = UiState.Loading
+            try {
+                val items = dao.getAll()
+                _realState.value = if (items.isEmpty()) UiState.Empty else UiState.Success(items)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _realState.value = UiState.Error(e.toUserMessage(), ::refresh)
+            }
+        }
+    }
 
     fun markRead(id: Long) {
-        _items.update { list -> list.map { if (it.id == id) it.copy(isRead = true) else it } }
+        viewModelScope.launch {
+            dao.markRead(id)
+            refresh()
+        }
     }
 }

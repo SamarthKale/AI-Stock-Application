@@ -5,3 +5,8 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     clean-disabled: false
+
+# Small limit specifically so ChatbotControllerTest's rate-limit test doesn't need 20+ requests
+# to exercise the 429 path.
+chatbot:
+  rate-limit-per-hour: 3

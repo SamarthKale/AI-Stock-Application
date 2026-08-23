@@ -1,0 +1,7 @@
+# Training-only dependency for Phase 5b's on-device momentum model
+# (train_momentum_tflite.py -- TensorFlow/Keras training + TFLite conversion).
+# Deliberately kept OUT of ../requirements.txt: the always-running FastAPI
+# service (main.py) never imports TensorFlow, only XGBoost -- pulling this
+# heavy dependency into the service's requirements would bloat what actually
+# needs to be installed to serve predictions.
+tensorflow==2.21.0
