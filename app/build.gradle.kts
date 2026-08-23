@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics.plugin)
 }
 
 // Read local.properties directly rather than via Gradle's project properties, so the key never
@@ -26,6 +27,20 @@ val backendBaseUrl: String = localProperties.getProperty("BACKEND_BASE_URL", "ht
 // local.properties/gitignored way as every other key, injected as a manifest placeholder
 // (AndroidManifest.xml's <meta-data>) rather than hardcoded there.
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY", "")
+
+// Phase 6: release signing. keystore.properties (gitignored, same pattern as local.properties)
+// holds the real store/key passwords; it and release.keystore.jks are never committed. When
+// absent (e.g. a CI job that only needs assembleDebug/compileDebugKotlin, or a fresh checkout
+// before the keystore has been provisioned), release builds fall back to the debug signing
+// config so the release build type still compiles — that build simply isn't a distributable,
+// properly-signed artifact until the real keystore.properties is present.
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile", "").isNotBlank()
 
 android {
     namespace = "com.stockpredictor.app"
@@ -51,13 +66,30 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
@@ -109,6 +141,10 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
+    // Phase 6: crash diagnostics. mappingFileUploadEnabled defaults to true for the release build
+    // type once isMinifyEnabled=true, so de-obfuscated stack traces reach the Firebase console
+    // automatically — no separate manual upload step needed.
+    implementation(libs.firebase.crashlytics)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization.converter)

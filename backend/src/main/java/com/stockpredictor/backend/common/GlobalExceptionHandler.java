@@ -42,6 +42,12 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", e.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler(PredictionRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handlePredictionRateLimitExceeded(PredictionRateLimitExceededException e, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", e.getMessage(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e, HttpServletRequest request) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();

@@ -1,0 +1,95 @@
+name: Deploy
+
+# Phase 6: builds backend/ai-service images natively for ARM64 (this repo is public, so
+# ubuntu-24.04-arm GitHub-hosted runners are free — see CLAUDE.md's Phase 6 plan §5), pushes to
+# GHCR (free for public repos, avoids OCI's own paid-beyond-free-allowance Container Registry),
+# then deploys to the OCI VM over SSH. Publishing a new model version is a separate, deliberate,
+# manually-triggered step (see ai-service/scripts/publish_model_artifacts.py) — this workflow only
+# ever fetches an already-published, pinned version; it never trains anything.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      backend_image: ${{ steps.image-names.outputs.backend_image }}
+      ai_service_image: ${{ steps.image-names.outputs.ai_service_image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercase image names
+        id: image-names
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend_image=${{ env.REGISTRY }}/${REPO_LOWER}-backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "ai_service_image=${{ env.REGISTRY }}/${REPO_LOWER}-ai-service:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch published model artifacts (never trains — see script docstring)
+        working-directory: ai-service
+        env:
+          OCI_OBJECT_STORAGE_ENDPOINT: ${{ secrets.OCI_OBJECT_STORAGE_ENDPOINT }}
+          OCI_OBJECT_STORAGE_BUCKET: ${{ secrets.OCI_OBJECT_STORAGE_BUCKET }}
+          OCI_ACCESS_KEY_ID: ${{ secrets.OCI_ACCESS_KEY_ID }}
+          OCI_SECRET_ACCESS_KEY: ${{ secrets.OCI_SECRET_ACCESS_KEY }}
+        run: |
+          pip install -r scripts/requirements-ops.txt
+          python scripts/fetch_model_artifacts.py
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image (native arm64 — this runner is arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: ${{ steps.image-names.outputs.backend_image }}
+
+      - name: Build and push ai-service image (native arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/ai-service.Dockerfile
+          push: true
+          tags: ${{ steps.image-names.outputs.ai_service_image }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to OCI VM over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_VM_HOST }}
+          username: ${{ secrets.OCI_VM_DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/ai-crypto-predictor
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            export BACKEND_IMAGE="${{ needs.build-and-push.outputs.backend_image }}"
+            export AI_SERVICE_IMAGE="${{ needs.build-and-push.outputs.ai_service_image }}"
+            docker compose pull backend ai-service || true
+            docker compose up -d --no-build
+            docker image prune -f
+            # Flyway migrations run automatically on backend startup (spring.flyway.enabled) —
+            # no separate migration step needed here.

@@ -14,15 +14,18 @@ per-request").
 from __future__ import annotations
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from api.prediction_router import router as prediction_router
+from logging_config import configure_logging
 from models import xgboost_model
 
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger("ai-service.startup")
+access_logger = logging.getLogger("ai-service.access")
 
 
 @asynccontextmanager
@@ -34,6 +37,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Crypto Predictor - Prediction Service", lifespan=lifespan)
 app.include_router(prediction_router)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Phase 6: one structured log line per request, same fields (method/path/status/durationMs)
+    as the backend's RequestLoggingFilter — kept as simple ASGI middleware rather than a FastAPI
+    dependency so it wraps every route (including /health) with no per-router opt-in needed."""
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = int((time.monotonic() - start) * 1000)
+    access_logger.info(
+        "http_request",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "durationMs": duration_ms,
+        },
+    )
+    return response
 
 
 @app.get("/health")

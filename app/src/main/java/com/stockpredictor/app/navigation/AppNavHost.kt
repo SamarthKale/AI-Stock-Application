@@ -33,6 +33,7 @@ import com.stockpredictor.app.ui.screens.onboarding.OnboardingScreen
 import com.stockpredictor.app.ui.screens.portfolio.PortfolioScreen
 import com.stockpredictor.app.ui.screens.predictions.PredictionsScreen
 import com.stockpredictor.app.ui.screens.search.SearchScreen
+import com.stockpredictor.app.ui.screens.settings.PrivacyPolicyScreen
 import com.stockpredictor.app.ui.screens.settings.SettingsScreen
 import com.stockpredictor.app.ui.screens.cryptodetail.CryptoDetailScreen
 import com.stockpredictor.app.ui.screens.watchlist.WatchlistScreen
@@ -152,6 +153,7 @@ fun AppNavHost(
                     },
                     onNavigateToChatbot = { navController.navigate(Destinations.Chatbot.route) },
                     onNavigateToExchangeMap = { navController.navigate(Destinations.ExchangeMap.route) },
+                    onNavigateToPrivacyPolicy = { navController.navigate(Destinations.PrivacyPolicy.route) },
                 )
             }
             composable(Destinations.Chatbot.route) {
@@ -159,6 +161,9 @@ fun AppNavHost(
             }
             composable(Destinations.ExchangeMap.route) {
                 ExchangeMapScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destinations.PrivacyPolicy.route) {
+                PrivacyPolicyScreen(onBack = { navController.popBackStack() })
             }
             composable(Destinations.Search.route) {
                 SearchScreen(

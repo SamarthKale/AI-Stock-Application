@@ -1,0 +1,5 @@
+# Phase 6 — install on the OCI VM with `crontab -e` (as the deploy user, not root). Loads the
+# same .env docker-compose.yml reads so pg_backup.sh has POSTGRES_USER/POSTGRES_DB/OCI_* available,
+# then runs the backup once daily at 03:17 UTC (an off-the-hour minute, so it doesn't pile up
+# against other cron jobs that tend to fire exactly on the hour).
+17 3 * * * set -a; . /opt/ai-crypto-predictor/.env; set +a; /opt/ai-crypto-predictor/docker/backup/pg_backup.sh >> /var/log/pg_backup.log 2>&1

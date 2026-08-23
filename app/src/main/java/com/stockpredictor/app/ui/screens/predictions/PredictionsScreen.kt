@@ -30,6 +30,7 @@ import com.stockpredictor.app.ui.components.EmptyState
 import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
 import com.stockpredictor.app.ui.components.PredictionConfidenceBar
+import com.stockpredictor.app.ui.components.PredictionDisclaimer
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
 import com.stockpredictor.app.ui.theme.ClayShapes
@@ -48,6 +49,9 @@ fun PredictionsScreen(
         // A simple filter-chip row (per Task 5's guidance) rather than an app-bar filter
         // icon+dropdown — it makes the active filter visible at a glance.
         FilterChipRow(selected = filter, onSelect = viewModel::setFilter)
+        // Phase 6 DoD: persistent (not a dismissible dialog), always on-screen without any tap —
+        // placed once here rather than per-row so it can't scroll out of view along with the list.
+        PredictionDisclaimer(modifier = Modifier.padding(horizontal = ClaySpacing.Lg, vertical = ClaySpacing.Xs))
         when (val s = state) {
             is UiState.Loading -> LoadingState(modifier = Modifier.weight(1f))
             is UiState.Empty -> EmptyState(message = "No predictions match this filter.", modifier = Modifier.weight(1f))

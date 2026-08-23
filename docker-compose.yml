@@ -1,0 +1,114 @@
+# Phase 6 — 5-service topology, identical shape for local dev and the OCI Ampere A1 VM (see
+# CLAUDE.md's Phase 6 architecture) — only .env values and the nginx cert source differ. Only
+# nginx publishes a host port; every other service is reachable exclusively over the default
+# Compose network, matching "backend and ai-service are unreachable directly (only via Nginx)"
+# in the Phase 6 Definition of Done.
+name: ai-crypto-predictor
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stockpredictor}
+      POSTGRES_USER: ${POSTGRES_USER:-stockpredictor_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stockpredictor_app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-service:
+    # `image:` lets deploy.yml `docker compose pull` a CI-built GHCR tag (set via the
+    # AI_SERVICE_IMAGE env var) and run it directly on the OCI VM without rebuilding there;
+    # `build:` is still used for local `docker compose up --build`, which ignores AI_SERVICE_IMAGE.
+    image: ${AI_SERVICE_IMAGE:-ai-crypto-predictor-ai-service:local}
+    build:
+      context: .
+      dockerfile: docker/ai-service.Dockerfile
+    restart: unless-stopped
+    environment:
+      LOG_FORMAT: json
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    # No `ports:` — reachable only from backend, over the Compose network, on its container port
+    # (see PredictionClient's base URL: http://ai-service:8000, matching PREDICTION_SERVICE_URL).
+
+  backend:
+    # Same image:/build: split as ai-service above.
+    image: ${BACKEND_IMAGE:-ai-crypto-predictor-backend:local}
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/stockpredictor}
+      DB_USERNAME: ${DB_USERNAME:-stockpredictor_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      PREDICTION_SERVICE_URL: http://ai-service:8000
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY must be set in .env}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:?COINGECKO_API_KEY must be set in .env}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    volumes:
+      # Never baked into the image (see docker/backend.Dockerfile) — mounted read-only from a
+      # file placed out-of-band, same on the OCI VM (§2c) as locally.
+      - ./firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    # No `ports:` — reachable only via nginx (see nginx's `ports:` below).
+
+  nginx:
+    image: nginx:1.27
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+    volumes:
+      - ./docker/nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - certbot_webroot:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  postgres_data:
+  redis_data:
+  certbot_webroot:

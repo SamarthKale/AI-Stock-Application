@@ -5,8 +5,17 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     clean-disabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 # Small limit specifically so ChatbotControllerTest's rate-limit test doesn't need 20+ requests
 # to exercise the 429 path.
 chatbot:
   rate-limit-per-hour: 3
+
+prediction-service:
+  # Small limit specifically so PredictionControllerTest's rate-limit test doesn't need 60+
+  # requests to exercise the 429 path — same reasoning as chatbot's.
+  rate-limit-per-hour: 5

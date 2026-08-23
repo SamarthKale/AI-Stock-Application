@@ -17,6 +17,34 @@ local.properties
 # Firebase config — contains project-specific API keys; repo is public, never commit this.
 /app/google-services.json
 
+# Phase 6 — release signing. Losing this keystore means losing the ability to publish updates
+# under the same app listing; back it up somewhere outside the repo (a secrets manager or an
+# encrypted archive), never here.
+/release.keystore.jks
+/keystore.properties
+
+# Phase 6 — backend/ai-service local secrets, mirrors local.properties' gitignore pattern.
+/.env
+/backend/.env
+/ai-service/.env
+*.env
+!*.env.example
+
+# Phase 6 — OCI/GCP credentials that might be dropped locally for scripts (never committed).
+firebase-service-account.json
+oci-config/
+*.pem
+*.key
+docker/nginx/certs/
+
+# Phase 6 — Terraform local state/vars (state can contain resource details best kept out of git
+# for a public repo; tfvars holds tenancy-identifying OCIDs).
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
+infra/terraform.tfvars
+infra/*.tfplan
+
 # Backend (Phase 3) — Gradle build output; the root /build rule above only matches the app module.
 backend/build
 backend/bin

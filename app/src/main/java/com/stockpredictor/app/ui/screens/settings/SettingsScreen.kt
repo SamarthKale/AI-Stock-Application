@@ -38,6 +38,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onNavigateToChatbot: () -> Unit = {},
     onNavigateToExchangeMap: () -> Unit = {},
+    onNavigateToPrivacyPolicy: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,7 +73,21 @@ fun SettingsScreen(
             }
             item {
                 SettingsSection(title = "About") {
-                    Text("AI Crypto Predictor · v1.0 (Phase 1)", color = ClayColor.TextSecondary)
+                    Text("AI Crypto Predictor · v1.0", color = ClayColor.TextSecondary)
+                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                    Text(
+                        "Predictions shown in this app are for informational purposes only and " +
+                            "are not investment advice.",
+                        color = ClayColor.TextSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                    ClayButton(
+                        text = "Privacy Policy",
+                        onClick = onNavigateToPrivacyPolicy,
+                        variant = ClayButtonVariant.Secondary,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
             item {
@@ -102,6 +117,25 @@ fun SettingsScreen(
                             Text("Major exchanges by live 24h volume", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
                         }
                         ClayButton(text = "Open", onClick = onNavigateToExchangeMap, variant = ClayButtonVariant.Secondary)
+                    }
+                }
+            }
+            if (com.stockpredictor.app.BuildConfig.DEBUG) {
+                item {
+                    SettingsSection(title = "Crash Reporting (debug only)") {
+                        Text(
+                            "Forces a real crash so it can be verified in the Firebase Crashlytics " +
+                                "console. Not shown in release builds.",
+                            color = ClayColor.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                        ClayButton(
+                            text = "Force Test Crash",
+                            onClick = { throw RuntimeException("Phase 6 Crashlytics test crash") },
+                            variant = ClayButtonVariant.Secondary,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }

@@ -14,6 +14,7 @@ sealed class Destinations(val route: String) {
     data object Notifications : Destinations("notifications")
     data object Chatbot : Destinations("chatbot")
     data object ExchangeMap : Destinations("exchange_map")
+    data object PrivacyPolicy : Destinations("privacy_policy")
 
     data object CryptoDetail : Destinations("crypto_detail/{coinId}") {
         const val ARG_COIN_ID = "coinId"

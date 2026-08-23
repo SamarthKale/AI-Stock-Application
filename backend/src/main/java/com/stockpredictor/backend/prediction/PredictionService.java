@@ -1,5 +1,6 @@
 package com.stockpredictor.backend.prediction;
 
+import com.stockpredictor.backend.common.PredictionRateLimitExceededException;
 import com.stockpredictor.backend.common.dto.PredictionHistoryRequestDto;
 import com.stockpredictor.backend.common.dto.PredictionRequestDto;
 import com.stockpredictor.backend.common.dto.PredictionResponseDto;
@@ -11,8 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Postgres-backed cache in front of {@link PredictionClient} — Redis was deliberately
- *  deferred (Phase 5 plan section 10); this table is the whole caching layer for now. */
+/** Postgres-backed cache (durable source of truth, unchanged since Phase 5) in front of
+ *  {@link PredictionClient}, now fronted by a Phase 6 Redis-backed per-uid rate limit — see
+ *  {@link PredictionRateLimiter}. */
 @Service
 public class PredictionService {
 
@@ -20,19 +22,25 @@ public class PredictionService {
 
     private final PredictionCacheRepository cacheRepository;
     private final PredictionClient predictionClient;
+    private final PredictionRateLimiter rateLimiter;
     private final Duration cacheTtl;
 
     public PredictionService(
             PredictionCacheRepository cacheRepository,
             PredictionClient predictionClient,
+            PredictionRateLimiter rateLimiter,
             @Value("${prediction-service.cache-ttl-minutes:20}") long cacheTtlMinutes) {
         this.cacheRepository = cacheRepository;
         this.predictionClient = predictionClient;
+        this.rateLimiter = rateLimiter;
         this.cacheTtl = Duration.ofMinutes(cacheTtlMinutes);
     }
 
     @Transactional
-    public PredictionResponseDto getPrediction(String coinId, PredictionHistoryRequestDto historyRequest) {
+    public PredictionResponseDto getPrediction(String uid, String coinId, PredictionHistoryRequestDto historyRequest) {
+        if (!rateLimiter.tryAcquire(uid)) {
+            throw new PredictionRateLimitExceededException("Prediction request rate limit exceeded — try again later");
+        }
         Optional<PredictionCacheEntity> cached = cacheRepository.findByCoinIdAndHorizon(coinId, HORIZON);
         if (cached.isPresent() && cached.get().getExpiresAt().isAfter(Instant.now())) {
             return toDto(cached.get());

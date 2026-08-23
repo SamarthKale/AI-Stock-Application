@@ -29,6 +29,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // Phase 6: cache + distributed rate limiting (OCI Always Free plan — see CLAUDE.md's Phase 6
+    // architecture). Fixes ChatbotRateLimiter's documented single-JVM limitation and backs the
+    // new PredictionRateLimiter; does not replace Postgres, which stays the durable source of
+    // truth for prediction_cache/alert_cooldowns.
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    // Phase 6: structured (JSON) logging — Docker container logs are the primary logging story
+    // (see CLAUDE.md's Phase 6 plan step 4), readable directly via `docker logs`/`docker compose
+    // logs` with no ingestion limit to worry about, and shippable to OCI Logging later if its free
+    // allowance proves sufficient.
+    implementation("net.logstash.logback:logstash-logback-encoder:9.0")
 
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")

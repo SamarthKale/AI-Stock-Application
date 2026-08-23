@@ -37,6 +37,7 @@ import com.stockpredictor.app.ui.components.EmptyState
 import com.stockpredictor.app.ui.components.ErrorState
 import com.stockpredictor.app.ui.components.LoadingState
 import com.stockpredictor.app.ui.components.PredictionConfidenceBar
+import com.stockpredictor.app.ui.components.PredictionDisclaimer
 import com.stockpredictor.app.ui.components.PriceChangeChip
 import com.stockpredictor.app.ui.state.UiState
 import com.stockpredictor.app.ui.theme.ClayColor
@@ -133,6 +134,8 @@ private fun PredictionSection(prediction: Prediction?) {
                     Spacer(modifier = Modifier.height(ClaySpacing.Sm))
                     Text("Target: ${String.format("%.2f", prediction.targetPrice)}", color = ClayColor.TextPrimary)
                 }
+                Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                PredictionDisclaimer()
             }
         }
     }

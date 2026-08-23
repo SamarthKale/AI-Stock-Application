@@ -1,0 +1,26 @@
+# Phase 6 — both docker/backend.Dockerfile and docker/ai-service.Dockerfile use the repo root as
+# their build context (see docker-compose.yml); this keeps what actually gets uploaded to the
+# Docker daemon lean and, more importantly, keeps secrets/credentials out of the build context
+# entirely (COPY can only reach what's in the context — excluding these here is defense-in-depth
+# on top of each Dockerfile only COPYing specific subpaths).
+.git/
+.gradle/
+**/.gradle/
+**/build/
+app/
+backend/build/
+backend/.gradle/
+ai-service/.venv/
+ai-service/data/
+ai-service/training/
+ai-service/scripts/
+ai-service/tests/
+ai-service/.pytest_cache/
+ai-service/**/__pycache__/
+ai-service/uvicorn.log
+release.keystore.jks
+keystore.properties
+local.properties
+.env
+firebase-service-account.json
+docker/nginx/certs/

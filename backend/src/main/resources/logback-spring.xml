@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Phase 6: local/dev keeps a human-readable console pattern (includes requestId/uid MDC fields
+  when RequestLoggingFilter has set them); the "docker"/"prod" Spring profiles (set via
+  SPRING_PROFILES_ACTIVE in docker-compose.yml/the OCI deployment) switch to structured JSON via
+  logstash-logback-encoder so `docker compose logs backend` output is directly grep/jq-able and
+  ready to ship to OCI Logging later without a reformatting step.
+-->
+<configuration>
+    <springProfile name="!docker &amp; !prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} [requestId=%X{requestId:-} uid=%X{uid:-}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <springProfile name="docker | prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>uid</includeMdcKeyName>
+                <customFields>{"service":"stockpredictor-backend"}</customFields>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- One line per request from RequestLoggingFilter — kept at INFO, not re-logged elsewhere. -->
+    <logger name="http.access" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+    </logger>
+</configuration>

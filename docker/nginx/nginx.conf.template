@@ -1,0 +1,51 @@
+# Phase 6 — envsubst'd by the official nginx image's docker-entrypoint at container start
+# (nginx:1.19+ auto-processes /etc/nginx/templates/*.template -> /etc/nginx/conf.d/, substituting
+# ${SERVER_NAME}). Same file for local dev (self-signed cert) and the OCI VM (Let's Encrypt cert)
+# — only the mounted cert files under /etc/nginx/certs/ differ; see docker/nginx/README.md.
+#
+# Only nginx has a public route. backend/ai-service/postgres/redis are reachable only inside the
+# Compose network (see docker-compose.yml — no other service publishes a host port).
+
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    # Let's Encrypt HTTP-01 challenge path (certbot writes here on the real OCI VM; unused
+    # locally, harmless to keep so both environments share one config file).
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${SERVER_NAME};
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 2m;
+
+    # ai-service has no location block here on purpose — it is never reachable through nginx,
+    # only backend calls it, over the Compose-internal network (PredictionClient's base URL).
+    location /api/ {
+        proxy_pass http://backend:8080/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /actuator/health {
+        proxy_pass http://backend:8080/actuator/health;
+    }
+
+    location / {
+        return 404;
+    }
+}

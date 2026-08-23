@@ -1,0 +1,5 @@
+# Phase 6 ops-only tooling (model artifact publish/fetch against OCI Object Storage's
+# S3-compatible API) — deliberately kept separate from ../requirements.txt, which is the
+# production ARM64 runtime dependency set verified for the OCI VM. These packages run only on a
+# developer machine or a GitHub Actions runner, never inside the ai-service container image.
+boto3>=1.34,<2.0

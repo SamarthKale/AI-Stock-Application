@@ -22,11 +22,27 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Phase 6: self-hosted Redis (Docker Compose service on the OCI VM, or localhost in dev) —
+  # cache + distributed rate limiting, coordinated across every backend process/thread sharing
+  # this instance. No password by default (Redis container is never exposed outside the Compose
+  # network / VM loopback — see docker-compose.yml/nginx config), overridable via REDIS_PASSWORD
+  # for defense-in-depth.
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
 # Phase 5: FastAPI prediction service. cache-ttl-minutes governs PredictionService's
 # Postgres-backed cache (Redis deliberately deferred — see Phase 5 plan section 10).
 prediction-service:
   base-url: ${PREDICTION_SERVICE_URL:http://localhost:8000}
   cache-ttl-minutes: ${PREDICTION_CACHE_TTL_MINUTES:20}
+  # Phase 6: PredictionRateLimiter's per-uid cap — protects the AI service's inference cost
+  # (predictions are coin-scoped, not user-scoped, but the rate limit itself is still per-uid,
+  # same reasoning as ChatbotRateLimiter). Higher than chatbot's default since this endpoint backs
+  # ordinary quote-viewing traffic (Crypto Detail/Predictions tab), not a chat conversation.
+  rate-limit-per-hour: ${PREDICTION_RATE_LIMIT_PER_HOUR:60}
 
 # Phase 5b: Gemini chatbot proxy. api-key is env-only (no literal default, matching
 # DB_PASSWORD's pattern) -- never committed, never sent to Android (GeminiChatbotClient is the

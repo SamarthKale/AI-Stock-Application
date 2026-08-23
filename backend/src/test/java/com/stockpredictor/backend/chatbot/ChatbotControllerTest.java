@@ -7,14 +7,17 @@ import com.stockpredictor.backend.common.dto.ChatMessageResponseDto;
 import com.stockpredictor.backend.common.dto.ErrorResponse;
 import com.stockpredictor.backend.config.FakeFirebaseTokenVerifier;
 import com.stockpredictor.backend.config.TestSecurityBeans;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -30,18 +33,30 @@ import org.springframework.test.context.ActiveProfiles;
  *
  * FakeFirebaseTokenVerifier only recognizes one valid token/uid, shared by every test in this
  * class (and every other controller test class) — so ChatbotRateLimiter's per-uid quota is a
- * single shared bucket across every @Test method here (the singleton bean persists for the whole
- * class, no @DirtiesContext). @TestMethodOrder pins the quota-exhausting rate-limit test last so
- * it can never leave the shared uid rate-limited for its siblings.
+ * single shared bucket across every @Test method here. @TestMethodOrder pins the quota-exhausting
+ * rate-limit test last so it can never leave the shared uid rate-limited for its siblings.
+ * Phase 6: the bucket now lives in real Redis (not an in-process map reset by every JVM start),
+ * so @BeforeAll flushes this class's specific rate-limit key once before the ordered run —
+ * otherwise a rate-limit key left over from an earlier test invocation within the same sliding
+ * window would make this class's results depend on unrelated prior runs.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import({TestSecurityBeans.class, TestChatbotBeans.class})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ChatbotControllerTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @BeforeAll
+    void resetRateLimitBucket() {
+        redisTemplate.delete("ratelimit:chatbot:" + FakeFirebaseTokenVerifier.VALID_TOKEN_UID);
+    }
 
     private HttpHeaders authHeaders() {
         HttpHeaders headers = new HttpHeaders();
