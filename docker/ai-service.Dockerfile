@@ -11,22 +11,12 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY ai-service/requirements.txt .
-# xgboost's PyPI wheel metadata declares `nvidia-nccl-cu12; platform_system == 'Linux' and
-# platform_machine != 'aarch64'` — i.e. it's pulled in ONLY on x86_64 Linux, never on arm64
-# (confirmed via the wheel's own METADATA, not guessed), which is exactly why this image was
-# ~635MB on amd64 vs ~160MB on arm64 before this fix: a single package, ~450MB unpacked, that
-# exists purely for multi-GPU NCCL collective-ops support xgboost doesn't use for CPU-only
-# inference (this service never touches a GPU — see the Tech Stack table's on-device/AI-service
-# rows). Deliberately NOT using `pip install --no-deps xgboost` here: that would make xgboost's
-# real runtime deps (numpy, scipy) look like they're satisfied only by coincidence via the
-# scikit-learn pin below, so a future change to that pin could silently break xgboost's import
-# with no visible connection back to this line. Instead: install everything normally (full
-# resolution, so numpy/scipy are genuinely resolved as xgboost's own declared deps, same as
-# scikit-learn's), then explicitly uninstall the unwanted nvidia-* packages in this same layer
-# (so the removed files never end up committed to an image layer in the first place) — the
-# exclusion's cause and effect both stay readable in this file instead of being implicit.
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip uninstall -y $(pip list --format=freeze | grep -i '^nvidia-' | cut -d= -f1) 2>/dev/null || true
+# requirements.txt platform-splits xgboost: plain `xgboost`'s x86_64 wheel bundles GPU/CUDA
+# device code (and a marker-gated nvidia-nccl-cu12 dependency) that this CPU-only service never
+# uses, inflating amd64 alone to ~635MB vs arm64's ~160MB. `xgboost-cpu` is the same project's
+# official CPU-only x86_64 build (~5MB) — same `xgboost` import name, no GPU code, no nvidia-*
+# dependency at all, so there's nothing left here to exclude/uninstall after install.
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ai-service/main.py ai-service/logging_config.py ./
 COPY ai-service/api ./api
