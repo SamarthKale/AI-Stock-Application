@@ -109,18 +109,18 @@ touching ViewModels.
 | AI/ML service | Python + FastAPI |
 | ML models | XGBoost, LSTM/GRU (PyTorch) — see "Future AI Reference" below |
 | On-device ML | TensorFlow Lite / ML Kit |
-| Chatbot | Dialogflow or an LLM API, behind a thin backend proxy |
+| Chatbot | Gemini (`GeminiChatbotClient`), behind a thin backend proxy (`ChatbotController`) — chosen over Dialogflow during Phase 5b |
 | Maps | Google Maps SDK |
 | Database (backend) | PostgreSQL |
-| Cache (backend) | Redis — not yet wired (see Phase 4's "Current status": no backend proxy exists yet, so nothing sits in front of it to cache) |
+| Cache (backend) | Redis — wired since Phase 6: distributed rate limiting for chatbot (`ChatbotRateLimiter`) and predictions (`PredictionRateLimiter`), both backed by a shared `RedisRateLimiter` |
 | Market data | **CoinGecko** (Demo plan — see Phase 4). Historical stock-era candidates (Finnhub, Alpha Vantage, Twelve Data, Yahoo Finance) are no longer applicable — CoinGecko was chosen specifically for crypto coverage after live verification during the migration. |
 | Charts | MPAndroidChart or Compose-native charting (e.g. Vico) — still not wired; Crypto Detail's price chart remains the Phase 1 Canvas placeholder |
-| Deployment | Docker + AWS |
+| Deployment | Docker (host TBD — OCI Always Free is blocked on payment verification, AWS has been cancelled; local `docker compose up` for dev/submission in the meantime; see Phase 6's STATUS block) |
 
 **Rule:** Kotlin/Java app and backend code never touch ML model code.
 Java = application logic and orchestration only. Python = all AI/ML.
 
-## Future AI Reference (Phase 5, not started)
+## Future AI Reference (Phase 5 — complete; kept as historical model-source evaluation)
 
 [Stock-Market-Probabilities-Deep-Learning by OliverEdholm](https://github.com/OliverEdholm/Stock-Market-Probabilities-Deep-Learning)
 — probability-of-move approach on *stock* data; the probability-vs-
@@ -1161,6 +1161,19 @@ what was actually learned building this):**
 
 ## Phase 5 — AI/ML Service
 
+**STATUS: COMPLETE.** The single-confidence design (Task 1's open question)
+was resolved in favor of `Prediction`'s original `PredictionDirection`
+shape, not the probability-of-move split. `ai-service/` has a real trained
+XGBoost model (`training/train_xgboost.py`, `training/build_dataset.py`,
+pooled multi-coin training with a genuine time-based train/validation
+split — 7/7 backend tests passing, an honest 0.39 Macro F1), a working
+`POST /predict` (verified live, real inference), and `PredictionController`/
+`PredictionService`/`PredictionRateLimiter` on the backend. Android's
+`PredictionRepository` calls the real backend endpoint (`PredictionsScreen`
+and `CryptoDetailScreen` both use it, with a `CachedPredictionDao`
+read-through fallback on failure); `mock/PredictionMocks.kt` has no other
+references left anywhere in the codebase.
+
 **Goal:** real AI predictions replace Phase 1 mock confidence/trend
 values.
 
@@ -1301,6 +1314,18 @@ ai-service/
 
 ## Phase 5b — On-Device ML + Chatbot
 
+**STATUS: COMPLETE.** Toolkit choice (Task 1) resolved to a custom TFLite
+model, not ML Kit's pre-built classifier: `OnDeviceMomentumClassifier.kt`
+runs a real, bundled `momentum_model.tflite` fully offline (no network
+call). Its own doc comment is honest about weak performance
+(`training/train_momentum_tflite.py`'s report: macro F1 0.30 vs. a 0.25
+naive-baseline, 0% recall on UP moves) — shipped as a best-effort local
+signal alongside, never replacing, the server-side AI Prediction card, not
+as a polished feature. Chatbot: `ChatbotScreen`/`ChatbotViewModel`
+(Android), `ChatbotController`/`ChatbotService`/`GeminiChatbotClient`/
+`ChatbotRateLimiter` (backend — Gemini, not Dialogflow), `ChatMessageDao`
+for local history — all wired into `AppNavHost` from Settings.
+
 **Goal:** a lightweight on-device ML feature, plus an "Ask AI" assistant.
 
 **Why this phase matters:** it introduces two very different execution
@@ -1423,26 +1448,31 @@ backend (Spring Boot):
 
 ## Phase 5c — Maps, Multimedia & AI Notifications
 
-**NEEDS RE-SCOPING BEFORE STARTING — crypto markets don't have "exchange
-hours."** This phase's core premise (`ExchangeData`'s
-`openLocalTime`/`closeLocalTime` + a live open/closed badge, mirroring
-NYSE/NASDAQ/LSE/NSE/BSE/TSE trading hours) assumes stock-market-style
-scheduled trading. Crypto trades 24/7 across every exchange, with no
-weekday/holiday closures — the open/closed concept simply doesn't apply.
-**Confirm the actual replacement concept with the user before building
-any of this phase** rather than assuming a direct swap; plausible
-alternatives (not yet decided, do not build speculatively): a map of
-major crypto exchange headquarters/regional trading-volume distribution
-instead of open/closed status, or dropping the map's "closed" state
-entirely and showing live regional volume share instead. The
-audio-briefing and alert-rule-evaluator tasks below are otherwise
-unaffected by the pivot (they already operate on watchlist/prediction
-data generically) — only `ExchangeData`/`ExchangeMapScreen`'s specific
-open/closed-hours concept needs a decision first.
+**STATUS: COMPLETE — re-scoped exactly along the lines this section
+originally proposed.** The stock-era premise below (`ExchangeData`'s
+`openLocalTime`/`closeLocalTime` + a live open/closed badge) doesn't apply
+to 24/7 crypto markets, as originally flagged here. The re-scoping decision
+this section asked for was made: `ExchangeData.kt`'s `ExchangeLocation` has
+**no timezone/open-closed fields at all** — live-verified CoinGecko
+exchange ids, registered-jurisdiction location data, and live
+`tradeVolume24hBtc`/`trustScore` (fetched by `ExchangeRepository`, joined
+at read time) replace the open/closed badge entirely — the "regional
+trading-volume distribution instead of open/closed status" alternative
+this section listed as a plausible option. `ExchangeMapScreen`/
+`ExchangeMapViewModel` are wired into `AppNavHost` from Settings.
+`MarketBriefingSpeaker.kt` (TTS) exists. The backend `alerts/` package is
+fully built: `AlertRuleService` (scheduled), `AlertEvaluator`,
+`CoinGeckoMarketDataClient`, `FirestoreWatchlistReader`,
+`FirebaseMessagingPushSender`, and `AlertCooldownService`/
+`AlertCooldownEntity`/`AlertCooldownRepository` (dedup/cooldown, per Task
+5's requirement below). Android's `StockPredictorFcmService`/
+`FcmTokenManager` handle delivery. The task list below (Tasks 2–6) should
+be read with `ExchangeData`'s open/closed-specific guidance understood as
+superseded by the above, not as still-open instructions.
 
-**Goal:** Global Exchanges Map (concept TBD — see above), audio market
-briefing, AI-triggered push notifications — using the FCM channel from
-Phase 2.5.
+**Goal:** Global Exchanges Map (re-scoped — see STATUS above), audio
+market briefing, AI-triggered push notifications — using the FCM channel
+from Phase 2.5.
 
 **Why this phase matters:** this phase closes the loop opened in Phase
 2.5 — the FCM channel that was only "receive and display" now gets real
@@ -1596,6 +1626,49 @@ backend (Spring Boot):
 
 ## Phase 6 — Production Hardening
 
+**STATUS: Tasks 1–5 (Android hardening) and the Docker/Compose/CI portions
+of Task 6 COMPLETE; final hosting target deliberately undecided.** This
+phase's original design (below) targeted AWS (ECS/Fargate vs.
+EC2+RDS+ElastiCache, left undecided). That target changed twice after this
+section was first written:
+
+1. **AWS → OCI Always Free** (an approved pivot, not reflected in the task
+   list below): a revised plan targeted a single OCI Ampere A1 VM (2
+   OCPU/12GB, Always Free), Docker Compose (nginx + Spring Boot + FastAPI +
+   PostgreSQL + Redis) as the entire production environment, OCI Object
+   Storage for backups/model artifacts, and GitHub Actions CI/CD building
+   ARM64 images on free native-ARM64 runners. Most of this was actually
+   built and live-verified: Redis-backed distributed rate limiting
+   (`ChatbotRateLimiter`, `PredictionRateLimiter`), structured JSON logging
+   (backend + ai-service), the 5-service `docker-compose.yml` topology
+   (verified end-to-end locally — Flyway migrations, Postgres/Redis
+   connectivity, Nginx TLS termination/routing, a real authenticated
+   backend→ai-service→backend prediction request, restart/persistence),
+   and both `docker/backend.Dockerfile`/`docker/ai-service.Dockerfile`
+   verified to build and run correctly on real `linux/arm64` (and
+   `linux/amd64`). `infra/` holds Terraform implementing the OCI
+   VCN/instance/Reserved-IP/Object-Storage provisioning — written and
+   reviewed, **never applied** (no OCI credentials were ever available in
+   the environment this was built in).
+2. **OCI → blocked, AWS → cancelled** (current state): the OCI tenancy is
+   blocked on payment verification, and AWS has been cancelled outright.
+   Decision: develop and run via local `docker compose up` for now; the
+   final host (a college server, or a paid VPS) is chosen at submission
+   time, not before. `infra/`'s Terraform is kept untouched as a future OCI
+   path in case that block resolves — it is not deleted or repurposed for
+   any other provider.
+
+Also complete, independent of any hosting decision: Task 1 (R8/ProGuard,
+verified via a real signed `assembleRelease`), Task 2 (real keystore
+signing), Task 3 (Crashlytics wired, test-crash path verified), Task 4
+(`PrivacyPolicyScreen`, linked from Settings), Task 5 (`PredictionDisclaimer`
+on both the Crypto Detail AI Prediction card and every Predictions-tab
+row). The app itself was kept host-portable throughout this churn without
+any code changes being needed: `BACKEND_BASE_URL` is a `BuildConfig` field
+(`app/build.gradle.kts`, sourced from `local.properties`, defaulting to the
+emulator-to-host alias `http://10.0.2.2:8080/`), not a hardcoded string,
+and both Dockerfiles are architecture-agnostic (no arch-specific branches).
+
 **Goal:** ship-ready release build.
 
 **Why this phase matters:** every corner cut "for now" in Phases 1–5c
@@ -1617,7 +1690,9 @@ documented tradeoffs as it is new work.
    predictions are shown (Crypto Detail, Predictions tab) — an ethics/
    legal necessity given the AI prediction and chatbot features.
 6. Dockerize backend services (Spring Boot, FastAPI); docker-compose for
-   local dev; deploy target AWS (ECS/Fargate or EC2 + RDS + ElastiCache).
+   local dev; deploy target originally AWS (ECS/Fargate or EC2 + RDS +
+   ElastiCache) — since superseded twice; see the STATUS block above for
+   what actually happened and the current host-TBD state.
 
 **Detailed implementation guidance (elaboration on the tasks above):**
 
@@ -1680,10 +1755,12 @@ documented tradeoffs as it is new work.
   local dev wiring both plus Postgres and Redis together with the same
   env-var names the deployed environment will use, so local dev and
   deployment configs don't drift into two different shapes.
-- For the AWS target, confirm with the user which specific path (ECS/
-  Fargate vs. EC2 + RDS + ElastiCache) before provisioning anything —
-  this is an infrastructure decision with real cost implications, not a
-  default to assume.
+- **Host is deliberately undecided until submission** (see the STATUS
+  block above — AWS cancelled, OCI blocked on payment verification) — do
+  not provision or assume a specific target prematurely. `docker-compose.yml`
+  and both Dockerfiles are already host-agnostic (verified on both
+  `linux/amd64` and `linux/arm64`), so this decision doesn't block any
+  engineering work in the meantime.
 - Carry forward every secret established across earlier phases
   (Firebase Admin SDK service account, market-data provider key,
   chatbot/LLM API key, Maps key, Postgres/Redis credentials) into the
@@ -1715,8 +1792,10 @@ documented tradeoffs as it is new work.
   never appeared in debug builds.
 - Writing the privacy policy generically instead of against the actual
   data flows implemented in this specific codebase.
-- Provisioning AWS infrastructure without first confirming the
-  ECS/Fargate-vs-EC2 choice with the user.
+- Assuming a specific final host (OCI, a college server, a VPS) before the
+  user actually decides at submission time — keep `docker-compose.yml`,
+  both Dockerfiles, and Android's `BACKEND_BASE_URL` build-config seam
+  host-agnostic in the meantime, per the STATUS block above.
 
 ---
 

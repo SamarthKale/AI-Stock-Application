@@ -15,11 +15,14 @@ the OCI VM in production — only `.env` values and the nginx cert source differ
    Your browser/emulator will show a certificate-untrusted warning; that's expected for a
    self-signed dev cert (the real OCI VM gets a real Let's Encrypt cert instead — see
    `docker/nginx/nginx.conf.template`'s comment and CLAUDE.md's Phase 6 plan §2b/§5).
-4. Populate `ai-service/artifacts/` — either run `ai-service/training/train_xgboost.py` and
-   `ai-service/training/train_momentum_tflite.py` locally, or run
-   `ai-service/scripts/fetch_model_artifacts.py` against a previously published version (needs
-   OCI Object Storage credentials — see that script's docstring). The ai-service Docker build
-   only ever copies whatever is already in that directory; it never trains anything itself.
+4. Nothing to do here — `ai-service/artifacts/` is committed directly to the repo (Phase 6 CI/CD
+   fix; previously fetched from OCI Object Storage at build time via a
+   `scripts/fetch_model_artifacts.py` that no longer exists, removed when OCI became blocked on
+   payment verification — see CLAUDE.md's Phase 6 STATUS block). To publish a *new* trained
+   version, run `ai-service/training/train_xgboost.py` /
+   `ai-service/training/train_momentum_tflite.py` locally and commit the resulting files in
+   `ai-service/artifacts/` directly. The ai-service Docker build only ever copies whatever is
+   already in that directory; it never trains anything itself.
 
 ## Bring the stack up
 

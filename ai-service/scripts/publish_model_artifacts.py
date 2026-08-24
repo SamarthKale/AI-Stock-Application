@@ -5,8 +5,14 @@ Deliberately a separate, manually-triggered step (run locally after `training/tr
 `training/train_momentum_tflite.py`, or from a manually-triggered GitHub Actions workflow) — never
 invoked from deploy.yml or any Dockerfile. This is what CLAUDE.md's Phase 6 plan and the project's
 own hard requirement mean by "never retrain during Docker builds": training happens here, once,
-deliberately; the Docker build only ever *fetches* an already-published, pinned version (see
-fetch_model_artifacts.py).
+deliberately.
+
+Phase 6 CI/CD fix: the Docker build no longer *fetches* a published version at build time (that
+required a sibling `fetch_model_artifacts.py`, removed when OCI became blocked on payment
+verification — see CLAUDE.md's Phase 6 STATUS block) — `ai-service/artifacts/` is committed
+directly to the repo instead, and `docker/ai-service.Dockerfile` just COPYs it. This script (and
+`_object_storage.py`) are kept, unused by anything in the current build/deploy path, as the
+publish half of a possible future OCI Object Storage path.
 
 Usage:
     python scripts/publish_model_artifacts.py [--version YYYYMMDDHHMMSS]

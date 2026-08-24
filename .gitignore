@@ -49,10 +49,13 @@ infra/*.tfplan
 backend/build
 backend/bin
 
-# AI service (Phase 5) — trained model artifacts and raw training data are large/regenerable
-# (re-run ai-service/training/fetch_training_data.py + train_xgboost.py to reproduce), not
-# source; local Python cache and the dev-server log are pure local-run byproducts.
-ai-service/artifacts/
+# AI service (Phase 5/6) — raw training data is large/regenerable (re-run
+# ai-service/training/fetch_training_data.py to reproduce), not source. Trained model artifacts
+# (ai-service/artifacts/) are the opposite: small (~1.5MB total) and NOT regenerable on demand
+# without a full retrain, so they're committed directly (Phase 6 CI/CD fix — the OCI Object
+# Storage publish/fetch step they used to require was removed when OCI became blocked on payment
+# verification; see CLAUDE.md's Phase 6 STATUS block). Local Python cache and the dev-server log
+# are pure local-run byproducts.
 ai-service/data/
 ai-service/uvicorn.log
 ai-service/__pycache__/

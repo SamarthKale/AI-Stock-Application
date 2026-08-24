@@ -1,5 +1,9 @@
-"""Shared OCI Object Storage client construction for publish_model_artifacts.py and
-fetch_model_artifacts.py. OCI Object Storage exposes an S3-compatible API (see CLAUDE.md's Phase 6
+"""Shared OCI Object Storage client construction for publish_model_artifacts.py. (Its former
+sibling, fetch_model_artifacts.py, was removed in the Phase 6 CI/CD fix — model artifacts are now
+committed directly to the repo instead of fetched at build time; see CLAUDE.md's Phase 6 STATUS
+block. This module is kept, currently unused by the build/deploy path, as the publish half of a
+possible future OCI Object Storage path.) OCI Object Storage exposes an S3-compatible API (see
+CLAUDE.md's Phase 6
 plan §2c: "Customer Secret Key... scoped for S3-compatible Object Storage access"), so plain
 boto3 works against it with no OCI-specific SDK dependency — one less thing to keep ARM64-verified
 in the production image, since this module is never imported there (see requirements-ops.txt).

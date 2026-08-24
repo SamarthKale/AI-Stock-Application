@@ -14,7 +14,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-stockpredictor_app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Phase 6 fix: postgres:18's official image changed its data-directory convention --
+      # PGDATA now defaults to a versioned subdirectory (/var/lib/postgresql/18/docker) under a
+      # single parent mount, not the pre-18 direct .../data mount this compose file used to have.
+      # Mounting straight at .../data made the entrypoint refuse to start (docker-library/postgres
+      # PR #1259) since that path no longer matches PGDATA. Mounting the single parent instead
+      # (the image's own documented fix) lets it manage the version-specific subdirectory itself.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stockpredictor_app}"]
       interval: 5s
