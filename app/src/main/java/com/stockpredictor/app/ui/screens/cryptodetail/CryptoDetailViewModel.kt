@@ -32,6 +32,7 @@ data class CryptoDetailData(
     val prediction: Prediction?,
     val momentum: MomentumResult?,
     val isInWatchlist: Boolean,
+    val isStale: Boolean,
 )
 
 /**
@@ -65,14 +66,15 @@ class CryptoDetailViewModel(
     private val _prediction = MutableStateFlow<Prediction?>(null)
     private val _momentum = MutableStateFlow<MomentumResult?>(null)
     private val _isInWatchlist = MutableStateFlow(false)
+    private val _isStale = MutableStateFlow(false)
 
     val uiState: StateFlow<UiState<CryptoDetailData>> = debugAwareUiState(
-        combine(_coinState, _prediction, _momentum, _isInWatchlist) { coinState, prediction, momentum, inWatchlist ->
+        combine(_coinState, _prediction, _momentum, _isInWatchlist, _isStale) { coinState, prediction, momentum, inWatchlist, isStale ->
             when (coinState) {
                 is UiState.Loading -> UiState.Loading
                 is UiState.Empty -> UiState.Empty
                 is UiState.Error -> coinState
-                is UiState.Success -> UiState.Success(CryptoDetailData(coinState.data, prediction, momentum, inWatchlist))
+                is UiState.Success -> UiState.Success(CryptoDetailData(coinState.data, prediction, momentum, inWatchlist, isStale))
             }
         },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
@@ -90,6 +92,7 @@ class CryptoDetailViewModel(
             _coinState.value = UiState.Loading
             try {
                 val result = coinRepository.getCoinDetail(coinId)
+                _isStale.value = result.isStale
                 _coinState.value = UiState.Success(result.data)
                 classifyMomentum(result.data.history)
             } catch (e: CoinNotFoundException) {

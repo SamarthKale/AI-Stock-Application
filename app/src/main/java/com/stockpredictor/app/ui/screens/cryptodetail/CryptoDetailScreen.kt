@@ -93,6 +93,14 @@ private fun CryptoDetailContent(
             Spacer(modifier = Modifier.width(ClaySpacing.Sm))
             PriceChangeChip(changePercent = coin.priceChangePercentage24h)
         }
+        if (data.isStale) {
+            Spacer(modifier = Modifier.height(ClaySpacing.Xs))
+            Text(
+                "Showing recently cached data — reconnect to refresh.",
+                color = ClayColor.TextSecondary,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
         Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         ClayCard(modifier = Modifier.fillMaxWidth()) {
             PriceHistoryChart(history = coin.history, isPositive = coin.priceChangePercentage24h >= 0.0)
