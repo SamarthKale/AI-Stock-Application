@@ -56,7 +56,7 @@ fun SettingsScreen(
         ) {
             item {
                 SettingsSection(title = "Account") {
-                    Text("Signed in as demo@user.com", color = ClayColor.TextSecondary)
+                    Text("Signed in as ${state.userEmail ?: "unknown"}", color = ClayColor.TextSecondary)
                 }
             }
             item {

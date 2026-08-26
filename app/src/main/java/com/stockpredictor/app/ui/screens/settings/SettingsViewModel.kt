@@ -15,12 +15,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class SettingsUiData(
     val notificationsEnabled: Boolean,
     val debugMode: DebugUiMode,
+    val userEmail: String?,
 )
 
 private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
@@ -46,10 +48,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val logoutEvent: SharedFlow<Unit> = _logoutEvent.asSharedFlow()
 
     val uiState: StateFlow<SettingsUiData> = combine(
-        _notificationsEnabled, DebugStateController.mode,
-    ) { enabled, mode ->
-        SettingsUiData(enabled, mode)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiData(true, DebugUiMode.NONE))
+        _notificationsEnabled, DebugStateController.mode, authRepository.authStateFlow().map { it?.email },
+    ) { enabled, mode, userEmail ->
+        SettingsUiData(enabled, mode, userEmail)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        SettingsUiData(true, DebugUiMode.NONE, authRepository.currentUser?.email),
+    )
 
     init {
         viewModelScope.launch {

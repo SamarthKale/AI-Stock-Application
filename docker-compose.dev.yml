@@ -1,0 +1,22 @@
+# Phase 6 — LOCAL DEVELOPMENT ONLY. Not used in production and not auto-loaded by plain
+# `docker compose up` (Compose only auto-merges a file literally named docker-compose.override.yml
+# — this file is deliberately named differently so it can never be picked up by accident on the
+# deploy host; deploy.yml's `docker compose up -d --no-build` on the VM never passes `-f` for this
+# file). Activate explicitly:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Why this exists: the Android emulator talks to `http://10.0.2.2:8080/` by default
+# (app/build.gradle.kts's BACKEND_BASE_URL fallback, permitted as cleartext only for that address
+# by network_security_config.xml — both already scoped for exactly this). That assumption predates
+# Phase 6's nginx-fronted topology, where `backend` no longer publishes a host port at all — only
+# `nginx` does (see docker-compose.yml). Rather than routing emulator traffic through nginx's
+# self-signed cert (whose SAN doesn't cover 10.0.2.2, and which exists to mirror the production TLS
+# story, not to be extended for a device-specific alias), this overlay republishes just the
+# backend's own port on the host for local dev — nginx remains the only production-style ingress,
+# Postgres/Redis/ai-service stay internal-only exactly as in the base file, and no security config
+# is loosened for anything other than this already-explicitly-cleartext-permitted loopback alias.
+services:
+  backend:
+    ports:
+      - "8080:8080"
