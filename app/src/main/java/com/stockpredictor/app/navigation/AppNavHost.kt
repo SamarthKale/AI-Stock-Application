@@ -108,7 +108,12 @@ fun AppNavHost(
                 LoginScreen(
                     onLoginSuccess = {
                         navController.navigate(Destinations.Home.route) {
-                            popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                            // popUpTo(0), not Onboarding: Login can be reached either from
+                            // Onboarding (first run) or straight from a post-Logout back stack
+                            // that already popped Onboarding away entirely (see Logout below) —
+                            // popping to the graph root unconditionally is what actually
+                            // guarantees Login never survives underneath Home either way.
+                            popUpTo(0) { inclusive = true }
                         }
                     },
                     onNavigateToSignup = { navController.navigate(Destinations.Signup.route) },
@@ -119,7 +124,8 @@ fun AppNavHost(
                 SignupScreen(
                     onSignupSuccess = {
                         navController.navigate(Destinations.Home.route) {
-                            popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                            // Same popUpTo(0) reasoning as Login's onLoginSuccess above.
+                            popUpTo(0) { inclusive = true }
                         }
                     },
                     onBack = { navController.popBackStack() },
