@@ -173,3 +173,146 @@ INFO         | Guest Angle is still unstable for API > 35.
 INFO         | Created extended window in 880.724ms
 WARNING      | adb command 'C:\Android\Sdk\platform-tools\adb.exe -s emulator-5554 shell getprop sys.boot_completed ' failed: 'adb.exe: device offline'
 INFO         | Boot completed in 25767 ms
+INFO         | Increasing screen off timeout, logcat buffer size to 2M.
+ERROR        | adb protocol fault (couldn't read status length)
+INFO         | IPv4 server found: 192.168.200.254
+INFO         | Ignore IPv6 address: b011:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: b011:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: b011:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 21:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 21:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 21:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 1827:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 1827:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 1827:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 4036:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 4036:445d:2:0:b011:445d:2:0
+INFO         | Ignore IPv6 address: 4036:445d:2:0:b011:445d:2:0
+INFO         | IPv4 server found: 192.168.200.254
+INFO         | Ignore IPv6 address: 405f:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: 405f:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: 405f:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: 906e:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: 906e:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: 906e:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: a874:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: a874:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: a874:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: d083:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: d083:505d:2:0:405f:505d:2:0
+INFO         | Ignore IPv6 address: d083:505d:2:0:405f:505d:2:0
+INFO         | IPv4 server found: 192.168.200.254
+INFO         | Ignore IPv6 address: c091:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: c091:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: c091:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 10a1:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 10a1:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 10a1:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 28a7:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 28a7:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 28a7:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 50b6:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 50b6:445d:2:0:c091:445d:2:0
+INFO         | Ignore IPv6 address: 50b6:445d:2:0:c091:445d:2:0
+INFO         | Created VkInstance:000002002F427090 for application:'' engine:''.
+INFO         | Destroyed VkInstance:000002002F427090 for application:'' engine:''.
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: d8f5:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 80fd:564e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9803:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: b009:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | Ignore IPv6 address: 9013:574e:2:0:80ee:564e:2:0
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | IPv4 server found: 172.20.10.1
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 78d1:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 20d9:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 38df:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 50e5:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+INFO         | Ignore IPv6 address: 30ef:6610:2:0:20ca:6610:2:0
+WARNING      | Not saving state: RAM not mapped as shared
+INFO         | Wait for emulator (pid 30056) 20 seconds to shutdown gracefully before kill;you can set environment variable ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL(in seconds) to change the default value (20 seconds)
+
+INFO         | Saving snapshot 'default_boot' using 3 ms
+INFO         | Wait for emulator (pid 30056) 20 seconds to shutdown gracefully before kill;you can set environment variable ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL(in seconds) to change the default value (20 seconds)
+
+pc_memory_init: above 4g size: 40000000
+INFO         | removeScene: scene=0x200151e57f0
+INFO         | removeAll
+WARNING      | Netsim Wifi dns:///localhost:60851 is gone due to Stream removed (CANCELLED)
