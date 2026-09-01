@@ -110,7 +110,7 @@ touching ViewModels.
 | ML models | XGBoost, LSTM/GRU (PyTorch) — see "Future AI Reference" below |
 | On-device ML | TensorFlow Lite / ML Kit |
 | Chatbot | Gemini (`GeminiChatbotClient`), behind a thin backend proxy (`ChatbotController`) — chosen over Dialogflow during Phase 5b |
-| Maps | Google Maps SDK |
+| Maps | MapLibre Native Android SDK + OpenFreeMap (vector tiles, no API key/billing — replaced the originally-planned Google Maps SDK during Phase 5c) |
 | Database (backend) | PostgreSQL |
 | Cache (backend) | Redis — wired since Phase 6: distributed rate limiting for chatbot (`ChatbotRateLimiter`) and predictions (`PredictionRateLimiter`), both backed by a shared `RedisRateLimiter` |
 | Market data | **CoinGecko** (Demo plan — see Phase 4). Historical stock-era candidates (Finnhub, Alpha Vantage, Twelve Data, Yahoo Finance) are no longer applicable — CoinGecko was chosen specifically for crypto coverage after live verification during the migration. |
@@ -1326,6 +1326,20 @@ as a polished feature. Chatbot: `ChatbotScreen`/`ChatbotViewModel`
 `ChatbotRateLimiter` (backend — Gemini, not Dialogflow), `ChatMessageDao`
 for local history — all wired into `AppNavHost` from Settings.
 
+A later submission-readiness pass added a second, always-available entry
+point: a small floating "Ask AI" bubble (`ui/components/ChatbotFab.kt`)
+placed once at `AppNavHost`'s root `Scaffold` (its `floatingActionButton`
+slot, not duplicated per screen) and shown on every authenticated
+destination except the pre-auth flow and the Chatbot screen itself
+(`Destinations.chatbotBubbleHiddenRoutes`) — tapping it navigates to the
+same `Destinations.Chatbot` route Settings' "Ask AI" row already used.
+No second chatbot implementation: it never touches
+`ChatbotViewModel`/`ChatbotRepository`/the backend proxy directly, purely
+a navigation shortcut into the one existing chat flow. Verified on Debug
+and signed Release builds with no crashes and no layout overlap with the
+bottom nav or any screen's own controls (including Exchange Map's OSM
+attribution and MapLibre's own attribution icon).
+
 **Goal:** a lightweight on-device ML feature, plus an "Ask AI" assistant.
 
 **Why this phase matters:** it introduces two very different execution
@@ -1527,7 +1541,10 @@ backend (Spring Boot):
 ```
 
 **Ordered tasks:**
-1. Add Google Maps SDK, API key in `local.properties` (never committed).
+1. Add a map rendering engine — **as actually built:** MapLibre Native
+   Android SDK + OpenFreeMap vector tiles, no API key/billing account
+   needed (superseded the originally-planned Google Maps SDK; see the
+   Task 1 elaboration below for the full swap).
 2. `ExchangeData.kt`: static data for major exchanges (NYSE, NASDAQ,
    LSE, NSE, BSE, TSE, etc.) with timezone, used to compute live
    open/closed status client-side.
@@ -1545,14 +1562,27 @@ backend (Spring Boot):
 
 **Detailed implementation guidance (elaboration on the tasks above):**
 
-*Task 1 — Maps SDK setup:*
-- API key restricted (Android app + package name + SHA-1 restriction in
-  the Google Cloud Console) at creation time, not added unrestricted "to
-  get it working first" — an unrestricted Maps key committed or leaked
-  is a billable liability.
-- Confirm the key is read via `local.properties`/`BuildConfig`, not
-  hardcoded in the manifest, matching the same secrets rule already
-  applied to Firebase/market-data/chatbot keys.
+*Task 1 — map engine setup (superseded — see below):*
+- **As originally spec'd:** Google Maps SDK, API key restricted (Android
+  app + package name + SHA-1 restriction in the Google Cloud Console) at
+  creation time, read via `local.properties`/`BuildConfig`, never
+  hardcoded in the manifest, matching the secrets rule applied to
+  Firebase/market-data/chatbot keys.
+- **As actually built:** the Google Maps SDK plan was replaced with
+  **MapLibre Native Android SDK** (`org.maplibre.gl:android-sdk`)
+  rendering **OpenFreeMap**'s "Liberty" vector style
+  (`https://tiles.openfreemap.org/styles/liberty`) via a plain
+  `AndroidView` wrapping a classic MapLibre `MapView` — live-verified
+  current versions at implementation time. This needs **no API key and
+  no billing account at all** (OpenFreeMap is a free, open vector-tile
+  host), so every API-key-restriction/`local.properties`/`BuildConfig`
+  concern above no longer applies to Maps specifically. Always-visible
+  "© OpenStreetMap contributors" attribution is shown on
+  `ExchangeMapScreen` per OpenFreeMap's terms. Verified end-to-end on a
+  Pixel_8 API 37 emulator in both a debug build and a signed
+  `assembleRelease` under R8 (MapLibre's own bundled consumer ProGuard
+  rules were sufficient — no manual keep rules needed); confirmed no new
+  16KB-page-size concern.
 
 *Task 2 — `ExchangeData.kt`:*
 - Each entry: `name, code (e.g. "NYSE"), city, latitude, longitude,
@@ -1700,6 +1730,16 @@ any code changes being needed: `BACKEND_BASE_URL` is a `BuildConfig` field
 emulator-to-host alias `http://10.0.2.2:8080/`), not a hardcoded string,
 and both Dockerfiles are architecture-agnostic (no arch-specific branches).
 
+A final submission-readiness audit found one gap against this phase's own
+"no debug-only code paths active" Definition of Done: Settings' "Preview
+UI States" force-Loading/Empty/Error toggle (`SettingsScreen.kt`, Phase
+1's debug mock-state toggle) was **not** gated behind `BuildConfig.DEBUG`
+— only the adjacent Crashlytics test-crash button was — so it was
+reachable in a signed Release build. Fixed by wrapping just that section
+in the same `BuildConfig.DEBUG` check already used for the Crashlytics
+button; verified absent from a fresh signed `assembleRelease` install on
+a Pixel_8 API 37 emulator, and unchanged/functional in Debug.
+
 **Goal:** ship-ready release build.
 
 **Why this phase matters:** every corner cut "for now" in Phases 1–5c
@@ -1794,9 +1834,10 @@ documented tradeoffs as it is new work.
   engineering work in the meantime.
 - Carry forward every secret established across earlier phases
   (Firebase Admin SDK service account, market-data provider key,
-  chatbot/LLM API key, Maps key, Postgres/Redis credentials) into the
-  deployment environment's secret/config management — do not bake any
-  of them into the Docker images themselves.
+  chatbot/LLM API key, Postgres/Redis credentials) into the deployment
+  environment's secret/config management — do not bake any of them into
+  the Docker images themselves. (No Maps key exists to carry forward:
+  MapLibre + OpenFreeMap, per Phase 5c, needs none.)
 
 **Definition of Done:**
 - Signed release APK/AAB builds and runs with no debug-only code paths

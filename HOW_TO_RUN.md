@@ -71,7 +71,7 @@ adb shell am start -n com.stockpredictor.app/.MainActivity
 - Predictions/chatbot require the backend (step 2) to be up and healthy — without it
   those screens show a real error state with retry, not mock data (by design).
 - Live crypto prices come directly from CoinGecko (no backend needed for Home/Watchlist/Search).
-- Exchange Map currently requires a Google Maps API key (`MAPS_API_KEY` in
-  `local.properties`) that is **not configured** — this screen won't render tiles
-  until that's set. (A MapLibre/OpenFreeMap replacement has been evaluated but not
-  yet implemented — see conversation history / CLAUDE.md Phase 5c.)
+- Exchange Map renders via **MapLibre Native Android SDK + OpenFreeMap** vector
+  tiles — no Google Maps API key, no `MAPS_API_KEY` entry in `local.properties`,
+  and no billing account are needed. Tiles load over plain internet access as
+  soon as the app has network, same as any other live-data screen.
