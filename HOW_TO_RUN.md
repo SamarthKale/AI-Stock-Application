@@ -46,10 +46,13 @@ in place if you're picking this up from prior sessions.
 2. Let Gradle sync finish (first sync can take a few minutes).
 3. **Required:** `local.properties` (repo root, gitignored) must contain
    `COINGECKO_API_KEY=<your key>`. `BACKEND_BASE_URL` defaults to
-   `http://10.0.2.2:8080/`, which is correct for the emulator talking to the
-   Docker backend from step 2 — no change needed unless using a physical device.
+   `http://10.0.2.2:8080/` and needs **no manual edit for either target** — a
+   Debug build auto-detects at runtime whether it's on an emulator or a
+   physical device and picks the right backend address itself (see the note
+   below).
 4. Select a device: an emulator (Pixel 8 / API 34+ recommended, with Google
-   Play services) or a physical device on the same network.
+   Play services) or a USB-connected physical device (see the physical-device
+   note below — it needs one extra `adb` command, not a different app build).
 5. Click **Run ▶** (or Shift+F10). First build installs and launches the app.
 
 ### Command-line alternative (no Android Studio UI)
@@ -75,3 +78,17 @@ adb shell am start -n com.stockpredictor.app/.MainActivity
   tiles — no Google Maps API key, no `MAPS_API_KEY` entry in `local.properties`,
   and no billing account are needed. Tiles load over plain internet access as
   soon as the app has network, same as any other live-data screen.
+- **Running Debug on a USB-connected physical device instead of the emulator:**
+  the same Debug APK works on both — no rebuild, no `local.properties` edit.
+  Just run one extra command once the device is connected and authorized
+  (`adb devices` shows it):
+  ```powershell
+  adb reverse tcp:8080 tcp:8080
+  ```
+  That's it. The app detects at runtime that it isn't an emulator and talks to
+  `http://127.0.0.1:8080/` instead of `10.0.2.2:8080/` — which the command
+  above forwards to this machine's Docker backend from step 2, same as
+  `10.0.2.2` does for the emulator. Re-run it any time you reconnect the
+  device (the forward doesn't survive a USB disconnect/adb restart). This
+  only applies to Debug builds — Release always uses `BACKEND_BASE_URL` as
+  configured, with no device-detection logic at all.

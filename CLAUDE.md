@@ -1740,6 +1740,39 @@ in the same `BuildConfig.DEBUG` check already used for the Crashlytics
 button; verified absent from a fresh signed `assembleRelease` install on
 a Pixel_8 API 37 emulator, and unchanged/functional in Debug.
 
+A later follow-up closed a real gap in that same "host-portable" story
+above: `BACKEND_BASE_URL`'s single compiled value worked for the emulator
+but not a USB-connected physical device (`10.0.2.2` is an emulator-only
+loopback alias — meaningless on real hardware). Since "emulator vs.
+physical device" is only knowable at runtime, not at Gradle's compile
+time, this is solved with Android's build-variant source-set override
+mechanism rather than any Gradle/`local.properties` change:
+`net/BackendUrlResolver.kt` exists in two mutually-exclusive versions —
+`app/src/debug/java/.../net/BackendUrlResolver.kt` inspects
+`Build.FINGERPRINT`/`MODEL`/`PRODUCT`/`HARDWARE` at runtime (matches the
+project's own `sdk_gphone*` AVDs) and picks `http://10.0.2.2:8080/` for
+an emulator or `http://127.0.0.1:8080/` for a physical device; the
+`app/src/release/` counterpart is a trivial pass-through to
+`BuildConfig.BACKEND_BASE_URL`, so Release is byte-for-byte unchanged and
+the detection logic doesn't exist in that binary at all (confirmed by
+grepping the release APK's `classes*.dex` for the literal string
+`127.0.0.1` — not present). An explicit `local.properties` override (a
+LAN IP, a future deployed host) still always wins on either target.
+`app/src/debug/res/xml/network_security_config.xml` mirrors this same
+pattern to permit cleartext HTTP to `127.0.0.1` in Debug only —
+`app/src/main/res/xml/network_security_config.xml` (what Release uses)
+stays at just `10.0.2.2`, unchanged. The physical-device path requires
+`adb reverse tcp:8080 tcp:8080` (device's own `localhost:8080` →
+this machine's `localhost:8080`, where `docker-compose.dev.yml` already
+republishes the backend). Verified end-to-end on a Pixel_8 API 37
+emulator with the local Docker stack up: resolved URL confirmed via
+logcat (`10.0.2.2:8080`), a real `200` from `/api/predictions/{coinId}`
+and `/api/chatbot/message` (a genuine Gemini reply rendered in the
+Chatbot screen), zero crashes. Physical-device-side was verified via the
+generated Debug config and the documented `adb reverse` command; no
+physical device was connected during implementation to also confirm the
+device-side runtime path end-to-end.
+
 **Goal:** ship-ready release build.
 
 **Why this phase matters:** every corner cut "for now" in Phases 1–5c

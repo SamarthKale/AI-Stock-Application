@@ -2,6 +2,7 @@ package com.stockpredictor.app.data.remote.api
 
 import com.stockpredictor.app.BuildConfig
 import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
+import com.stockpredictor.app.net.BackendUrlResolver
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -16,7 +17,9 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 
 /**
  * Separate Retrofit/OkHttp instance from [RetrofitClient] (CoinGecko) — different base URL
- * (the Spring Boot backend, see app/build.gradle.kts's BACKEND_BASE_URL) and different auth
+ * (the Spring Boot backend, resolved via [BackendUrlResolver] — see its doc comment for the
+ * Debug emulator-vs-physical-device split; Release is a pure pass-through to
+ * [BuildConfig.BACKEND_BASE_URL]) and different auth
  * (Firebase ID token Bearer header, not a CoinGecko API key). This is the first real consumer
  * of "Android calls Spring Boot" — Phase 4 never needed it since market data goes straight to
  * CoinGecko.
@@ -73,7 +76,7 @@ object BackendRetrofitClient {
 
     val backendApi: BackendApiService by lazy {
         Retrofit.Builder()
-            .baseUrl(BuildConfig.BACKEND_BASE_URL)
+            .baseUrl(BackendUrlResolver.resolve())
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
