@@ -54,6 +54,7 @@ object ClayDimens {
     val UnreadDotTopOffset: Dp = 6.dp                   // aligns the dot with the title's cap height
     val ReadRowIndent: Dp = ClaySpacing.Md + UnreadDotSize // aligns read rows with unread rows' dot+gap width
     val IconTextGap: Dp = 2.dp                          // tight gap between an inline icon and its label
+    val ChatbotFabSize: Dp = 48.dp                      // global Chatbot FAB (see ChatbotFab / AppNavHost)
 }
 
 /**

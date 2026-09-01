@@ -1470,6 +1470,37 @@ fully built: `AlertRuleService` (scheduled), `AlertEvaluator`,
 be read with `ExchangeData`'s open/closed-specific guidance understood as
 superseded by the above, not as still-open instructions.
 
+**Practical 7 GPS gap (closed after this section's original completion):**
+an audit found the map's "network + multimedia + GPS combined" coverage
+claim was incomplete — no `FusedLocationProviderClient`, no
+`ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION`, `ExchangeData`'s
+coordinates were the only positions ever used. Closed with the smallest
+technically-correct addition: a "Locate me" action on `ExchangeMapScreen`
+(`Icons.Filled.MyLocation` in `ClayAppBar`'s trailing slot) requesting
+both permissions at runtime, then a single one-shot
+`FusedLocationProviderClient.getCurrentLocation()` call in
+`ExchangeMapViewModel` (now an `AndroidViewModel` — needed for the
+location client and its own `MarketBriefingSpeaker` instance, mirroring
+`HomeViewModel`'s pattern) — never `requestLocationUpdates`, no
+background/continuous tracking, no reverse geocoding. On a fix: a
+distinct "you are here" marker is added and the camera recenters
+(`ExchangeMapContent`'s existing marker-sync effect, not a second
+competing one, so `map.clear()` never wipes it), the nearest of the 8
+already-live-fetched `ExchangeMarketInfo` entries is found via a
+client-side haversine calculation and its existing `ExchangeDetailSheet`
+opens with a new optional `distanceKm` line, and the existing
+`MarketBriefingSpeaker` speaks one sentence combining the distance with
+that already-loaded live volume figure — network, multimedia (map +
+TTS), and GPS in one user action, on the existing screen, no new route.
+Denied/unavailable location shows a small inline retry banner (never a
+full-screen error, never a crash/ANR — the fetch is bounded by a 15s
+timeout). Dependency: `com.google.android.gms:play-services-location`
+(live-verified current version at implementation time). Verified on a
+Pixel_8 API 37 emulator via simulated GPS fixes (`adb emu geo fix`) for
+the success/denial/no-fix paths, in both a debug build and a signed
+`assembleRelease` build under R8 (no extra ProGuard rules needed — the
+library's own consumer rules were sufficient).
+
 **Goal:** Global Exchanges Map (re-scoped — see STATUS above), audio
 market briefing, AI-triggered push notifications — using the FCM channel
 from Phase 2.5.
@@ -1477,8 +1508,8 @@ from Phase 2.5.
 **Why this phase matters:** this phase closes the loop opened in Phase
 2.5 — the FCM channel that was only "receive and display" now gets real
 server-driven rules behind it, and this is the phase most likely to
-touch device permissions (location isn't needed for the map since
-exchanges are static data, but notifications and TTS both have their own
+touch device permissions (notifications, TTS, and — per the Practical 7
+GPS gap closed above — one-shot foreground location each have their own
 platform quirks) and real-world timezone/DST correctness (if the
 open/closed concept survives re-scoping in some form).
 
@@ -1842,7 +1873,7 @@ documented tradeoffs as it is new work.
 | 4 | Firebase data sync | Phase 2.5 |/
 | 5 | REST APIs (Retrofit/Volley) | Phase 4 |
 | 6 | Google Maps | Phase 5c — Global Exchanges Map |
-| 7 | Network + multimedia + GPS combined | Phase 5c — audio briefing + map + network |
+| 7 | Network + multimedia + GPS combined | Phase 5c — audio briefing + map + network + Exchange Map's "Locate me" one-shot GPS fix |
 | 8 | AI chatbot | Phase 5b — "Ask AI" assistant |
 | 9 | ML-based features | Phase 5 (server-side) + Phase 5b (on-device) |
 | 10 | AI-based alerts/notifications | Phase 5c — FCM + rule engine |

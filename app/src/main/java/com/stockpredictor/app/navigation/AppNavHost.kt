@@ -21,6 +21,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
 import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
+import com.stockpredictor.app.ui.components.ChatbotFab
 import com.stockpredictor.app.ui.components.ClayBottomNav
 import com.stockpredictor.app.ui.screens.auth.ForgotPasswordScreen
 import com.stockpredictor.app.ui.screens.auth.LoginScreen
@@ -69,6 +70,17 @@ fun AppNavHost(
 
     Scaffold(
         containerColor = ClayColor.Background,
+        // Global "Ask AI" bubble: one root-level placement instead of duplicating it per screen
+        // (see Destinations.chatbotBubbleHiddenRoutes for exactly which routes hide it). Scaffold
+        // positions this slot bottom-end with its own standard spacing and already accounts for
+        // bottomBar's height, so the bubble never overlaps the bottom nav on the 5 top-level tabs.
+        floatingActionButton = {
+            if (currentRoute != null && currentRoute !in Destinations.chatbotBubbleHiddenRoutes) {
+                ChatbotFab(onClick = {
+                    navController.navigate(Destinations.Chatbot.route) { launchSingleTop = true }
+                })
+            }
+        },
         bottomBar = {
             if (currentRoute in Destinations.bottomNavRoutes) {
                 ClayBottomNav(

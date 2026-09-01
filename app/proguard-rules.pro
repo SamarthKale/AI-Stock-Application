@@ -39,10 +39,10 @@
 -keep class org.tensorflow.lite.** { *; }
 -dontwarn org.tensorflow.lite.**
 
-# --- Google Maps Compose (Phase 5c exchange map) ---
--keep class com.google.android.gms.maps.** { *; }
--keep interface com.google.android.gms.maps.** { *; }
--dontwarn com.google.android.gms.maps.**
+# --- MapLibre (Phase 5c exchange map) ---
+# MapLibre Native Android publishes its own consumer-proguard rules (bundled in the AAR), which
+# already cover its JNI/reflection surface -- no extra keep rules added here per that precedent;
+# add one only if a real assembleRelease run surfaces a concrete R8/runtime failure.
 
 # --- Firebase (Auth / Firestore / Messaging) ---
 # FirestoreSyncRepository writes/reads plain Map<String, Any> documents (verified — no

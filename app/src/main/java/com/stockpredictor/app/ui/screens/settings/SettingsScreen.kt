@@ -139,15 +139,17 @@ fun SettingsScreen(
                     }
                 }
             }
-            item {
-                SettingsSection(title = "Preview UI States") {
-                    Text(
-                        "Force any data screen into a given state to verify it renders correctly.",
-                        color = ClayColor.TextSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                    DebugModeRow(selected = state.debugMode, onSelect = viewModel::setDebugMode)
+            if (com.stockpredictor.app.BuildConfig.DEBUG) {
+                item {
+                    SettingsSection(title = "Preview UI States") {
+                        Text(
+                            "Force any data screen into a given state to verify it renders correctly.",
+                            color = ClayColor.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                        DebugModeRow(selected = state.debugMode, onSelect = viewModel::setDebugMode)
+                    }
                 }
             }
             item {

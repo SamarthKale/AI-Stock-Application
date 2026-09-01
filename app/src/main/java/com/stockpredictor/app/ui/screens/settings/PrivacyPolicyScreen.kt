@@ -71,8 +71,11 @@ private val sections = listOf(
     ),
     PrivacySection(
         "Maps",
-        "The Exchange Map screen displays static exchange locations using the Google Maps SDK. " +
-            "This screen does not access or share your device's location.",
+        "The Exchange Map screen displays static exchange locations using MapLibre with map " +
+            "tiles from OpenFreeMap, built from OpenStreetMap data. Loading the map sends your " +
+            "device's IP address to OpenFreeMap's tile servers to fetch map imagery, the same way " +
+            "any map image loads over the network — no account, search query, or device location " +
+            "is sent. This screen does not access or share your device's location.",
     ),
     PrivacySection(
         "Crash diagnostics (Firebase Crashlytics)",

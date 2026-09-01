@@ -33,5 +33,18 @@ sealed class Destinations(val route: String) {
         val bottomNavRoutes: Set<String> by lazy {
             setOf(Home.route, Watchlist.route, Predictions.route, Portfolio.route, Settings.route)
         }
+
+        /**
+         * Routes where the global "Ask AI" FAB (root-level placement, see AppNavHost's Scaffold)
+         * is hidden: the entire pre-auth flow (nothing to ask about before signing in, and the
+         * bubble has no business floating over Login/Signup's own submit buttons) plus the
+         * Chatbot screen itself (no point overlaying a shortcut to the screen already open).
+         * Every other destination -- Home, Watchlist, Predictions, Portfolio, Settings, Search,
+         * Notifications, Crypto Detail, Exchange Map, Privacy Policy -- shows it by default, so a
+         * newly added authenticated screen gets the bubble automatically without another edit here.
+         */
+        val chatbotBubbleHiddenRoutes: Set<String> by lazy {
+            setOf(Onboarding.route, Login.route, Signup.route, ForgotPassword.route, Chatbot.route)
+        }
     }
 }

@@ -22,11 +22,6 @@ val coinGeckoApiKey: String = localProperties.getProperty("COINGECKO_API_KEY", "
 // alias for the host machine's localhost — override in local.properties (BACKEND_BASE_URL=...)
 // for a physical device (LAN IP) or a deployed backend later.
 val backendBaseUrl: String = localProperties.getProperty("BACKEND_BASE_URL", "http://10.0.2.2:8080/")
-// Phase 5c: Google Maps SDK, for the exchange map. Restricted by package name + SHA-1 at
-// creation in the Google Cloud Console (never added unrestricted) — read the same
-// local.properties/gitignored way as every other key, injected as a manifest placeholder
-// (AndroidManifest.xml's <meta-data>) rather than hardcoded there.
-val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY", "")
 
 // Phase 6: release signing. keystore.properties (gitignored, same pattern as local.properties)
 // holds the real store/key passwords; it and release.keystore.jks are never committed. When
@@ -63,7 +58,6 @@ android {
         // code; that's expected for a Demo-tier client key (see RetrofitClient's doc comment).
         buildConfigField("String", "COINGECKO_API_KEY", "\"$coinGeckoApiKey\"")
         buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
-        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     signingConfigs {
@@ -108,22 +102,6 @@ android {
     }
 }
 
-// The latest maps-compose (8.4.0, live-verified as "latest" during planning) turned out to
-// require a Kotlin compiler newer than this project's declared 2.2.10 -- its own .kotlin_module
-// metadata is incompatible, not just a transitive stdlib version mismatch, so maps-compose was
-// pinned down to 4.4.1 instead (contemporaneous with this project's Compose BOM), confirmed by
-// trial compilation. This resolutionStrategy stays as a defensive backstop against any other
-// transitive dependency pulling in a newer kotlin-stdlib than the project's own.
-configurations.all {
-    resolutionStrategy {
-        force(
-            "org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}",
-            "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${libs.versions.kotlin.get()}",
-            "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${libs.versions.kotlin.get()}",
-        )
-    }
-}
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -158,10 +136,13 @@ dependencies {
     // and this avoids ML Kit's Play-Services-backed model-download path, which would undermine
     // the guaranteed-offline point of an on-device feature.
     implementation(libs.tensorflow.lite)
-    // Phase 5c: exchange map. maps-compose transitively pulls play-services-maps -- no separate
-    // dependency needed. Pinned to 4.4.1, not the newer "latest" (8.4.0) found during planning --
-    // see the resolutionStrategy comment above for why.
-    implementation(libs.maps.compose)
+    // Phase 5c: exchange map, MapLibre Native Android SDK + OpenFreeMap (see ExchangeMapScreen's
+    // doc comment) -- no API key, no manifest placeholder needed (unlike the Google Maps SDK this
+    // replaced). Hosted via plain AndroidView, so no separate Compose-interop artifact is needed.
+    implementation(libs.maplibre.android.sdk)
+    // Practical 7: one-shot FusedLocationProviderClient for Exchange Map's "Locate me" action --
+    // see ExchangeMapViewModel's doc comment. No background-location dependency added.
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
