@@ -1,6 +1,9 @@
 package com.stockpredictor.app.ui.screens.settings
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
+import com.stockpredictor.app.data.remote.firebase.ProfilePhotoRepository
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.SettingsDao
@@ -57,9 +60,29 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         SettingsUiData(true, DebugUiMode.NONE, authRepository.currentUser?.email),
     )
 
+    private val photoRepository = ProfilePhotoRepository()
+    private val _profilePhoto = MutableStateFlow<Bitmap?>(null)
+    val profilePhoto: StateFlow<Bitmap?> = _profilePhoto
+    private val _photoUploading = MutableStateFlow(false)
+    val photoUploading: StateFlow<Boolean> = _photoUploading
+    private val _photoError = MutableStateFlow<String?>(null)
+    val photoError: StateFlow<String?> = _photoError
+
     init {
         viewModelScope.launch {
             _notificationsEnabled.value = dao.getBoolean(KEY_NOTIFICATIONS_ENABLED, default = true)
+        }
+        viewModelScope.launch { _profilePhoto.value = photoRepository.load() }
+    }
+
+    fun onPhotoPicked(uri: Uri) {
+        viewModelScope.launch {
+            _photoUploading.value = true
+            _photoError.value = null
+            photoRepository.upload(getApplication(), uri)
+                .onSuccess { _profilePhoto.value = it }
+                .onFailure { _photoError.value = "Couldn't upload photo. Please try again." }
+            _photoUploading.value = false
         }
     }
 

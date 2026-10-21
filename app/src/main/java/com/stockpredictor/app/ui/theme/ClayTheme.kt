@@ -24,6 +24,7 @@ object ClaySpacing {
     val Lg: Dp = 16.dp
     val Xl: Dp = 24.dp
     val Xxl: Dp = 32.dp
+    val Avatar: Dp = 64.dp
 }
 
 /** Elevation presets consumed by [clayShadow]. */

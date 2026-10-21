@@ -1,6 +1,20 @@
 package com.stockpredictor.app.ui.screens.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +56,12 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val profilePhoto by viewModel.profilePhoto.collectAsStateWithLifecycle()
+    val photoUploading by viewModel.photoUploading.collectAsStateWithLifecycle()
+    val photoError by viewModel.photoError.collectAsStateWithLifecycle()
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) viewModel.onPhotoPicked(uri)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.logoutEvent.collect { onLogout() }
@@ -56,7 +76,39 @@ fun SettingsScreen(
         ) {
             item {
                 SettingsSection(title = "Account") {
-                    Text("Signed in as ${state.userEmail ?: "unknown"}", color = ClayColor.TextSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(ClaySpacing.Avatar).clip(CircleShape).background(ClayColor.Background),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val photo = profilePhoto
+                            if (photo != null) {
+                                Image(
+                                    bitmap = photo.asImageBitmap(),
+                                    contentDescription = "Profile photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                Icon(Icons.Filled.Person, contentDescription = null, tint = ClayColor.TextSecondary)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(ClaySpacing.Md))
+                        Text("Signed in as ${state.userEmail ?: "unknown"}", color = ClayColor.TextSecondary)
+                    }
+                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
+                    ClayButton(
+                        text = if (profilePhoto == null) "Add profile photo" else "Change profile photo",
+                        onClick = {
+                            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        variant = ClayButtonVariant.Secondary,
+                        loading = photoUploading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    photoError?.let {
+                        Text(it, color = ClayColor.AccentCoral, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
             item {
