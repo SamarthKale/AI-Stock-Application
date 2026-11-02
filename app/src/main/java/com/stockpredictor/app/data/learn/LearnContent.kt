@@ -40,13 +40,13 @@ object LearnContent {
             rawRes = R.raw.how_to_predict_crypto_markets,
         ),
         LearnItem(
-            id = "crypto_video_two",
+            id = "why_smart_money_buying_bitcoin",
             title = "Why Is Smart Money Buying Bitcoin?",
             subtitle = "Why institutions are adopting Bitcoin",
             type = LearnType.VIDEO,
             category = LearnCategory.TUTORIAL,
             durationLabel = "9:22",
-            rawRes = R.raw.crypto_video_two,
+            rawRes = R.raw.why_smart_money_buying_bitcoin,
         ),
         LearnItem(
             id = "crypto_basics_pdf",
