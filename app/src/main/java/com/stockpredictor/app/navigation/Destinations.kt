@@ -16,6 +16,20 @@ sealed class Destinations(val route: String) {
     data object ExchangeMap : Destinations("exchange_map")
     data object PrivacyPolicy : Destinations("privacy_policy")
 
+    /** Tutorials/Demo list. [ARG_CATEGORY] is "tutorial", "demo" or "all". */
+    data object Learn : Destinations("learn/{category}") {
+        const val ARG_CATEGORY = "category"
+        fun createRoute(category: String) = "learn/$category"
+    }
+    data object VideoPlayer : Destinations("video/{itemId}") {
+        const val ARG_ITEM_ID = "itemId"
+        fun createRoute(itemId: String) = "video/$itemId"
+    }
+    data object PdfReader : Destinations("pdf/{itemId}") {
+        const val ARG_ITEM_ID = "itemId"
+        fun createRoute(itemId: String) = "pdf/$itemId"
+    }
+
     data object CryptoDetail : Destinations("crypto_detail/{coinId}") {
         const val ARG_COIN_ID = "coinId"
         fun createRoute(coinId: String) = "crypto_detail/$coinId"
@@ -44,7 +58,11 @@ sealed class Destinations(val route: String) {
          * newly added authenticated screen gets the bubble automatically without another edit here.
          */
         val chatbotBubbleHiddenRoutes: Set<String> by lazy {
-            setOf(Onboarding.route, Login.route, Signup.route, ForgotPassword.route, Chatbot.route)
+            setOf(
+                Onboarding.route, Login.route, Signup.route, ForgotPassword.route, Chatbot.route,
+                // Media screens: the bubble would sit on top of the player's own controls / the page pill.
+                VideoPlayer.route, PdfReader.route,
+            )
         }
     }
 }

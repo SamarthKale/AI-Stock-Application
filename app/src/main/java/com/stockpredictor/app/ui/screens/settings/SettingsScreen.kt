@@ -5,18 +5,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,9 +15,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -36,23 +42,41 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.stockpredictor.app.debug.DebugUiMode
-import com.stockpredictor.app.ui.components.ClayAppBar
 import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayButtonVariant
 import com.stockpredictor.app.ui.components.ClayCard
 import com.stockpredictor.app.ui.theme.ClayColor
+import com.stockpredictor.app.ui.theme.ClayDimens
+import com.stockpredictor.app.ui.theme.ClayElevation
+import com.stockpredictor.app.ui.theme.ClayShapes
 import com.stockpredictor.app.ui.theme.ClaySpacing
+import com.stockpredictor.app.ui.theme.clayShadow
 
+/**
+ * Profile tab (the old Settings screen; route is still `settings`). v2 changes: a profile header
+ * with the photo picker, grouped rows for Wallet / Learn / Offices / Assistant, and the two
+ * developer-only sections ("Crash Reporting" and "Preview UI States") removed entirely -- they
+ * were never meant for end users. DebugStateController itself is untouched (every ViewModel still
+ * reads it); it just stays at NONE now that nothing can change it from the UI.
+ */
 @Composable
 fun SettingsScreen(
     onLogout: () -> Unit,
     onNavigateToChatbot: () -> Unit = {},
     onNavigateToExchangeMap: () -> Unit = {},
     onNavigateToPrivacyPolicy: () -> Unit = {},
+    onNavigateToWallet: () -> Unit = {},
+    onNavigateToTutorials: () -> Unit = {},
+    onNavigateToDemo: () -> Unit = {},
+    onProfilePhotoChanged: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,186 +90,161 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.logoutEvent.collect { onLogout() }
     }
+    // Keep the drawer/Home avatar in sync once an upload finishes.
+    LaunchedEffect(profilePhoto) { if (profilePhoto != null) onProfilePhotoChanged() }
 
-    Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
-        ClayAppBar(title = "Settings")
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(ClaySpacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(ClaySpacing.Lg),
-        ) {
-            item {
-                SettingsSection(title = "Account") {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(ClaySpacing.Avatar).clip(CircleShape).background(ClayColor.Background),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val photo = profilePhoto
-                            if (photo != null) {
-                                Image(
-                                    bitmap = photo.asImageBitmap(),
-                                    contentDescription = "Profile photo",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                Icon(Icons.Filled.Person, contentDescription = null, tint = ClayColor.TextSecondary)
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(ClaySpacing.Md))
-                        Text("Signed in as ${state.userEmail ?: "unknown"}", color = ClayColor.TextSecondary)
-                    }
-                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                    ClayButton(
-                        text = if (profilePhoto == null) "Add profile photo" else "Change profile photo",
-                        onClick = {
-                            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        },
-                        variant = ClayButtonVariant.Secondary,
-                        loading = photoUploading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    photoError?.let {
-                        Text(it, color = ClayColor.AccentCoral, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-            item {
-                SettingsSection(title = "Notifications") {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Push notifications", color = ClayColor.TextPrimary)
-                        Switch(
-                            checked = state.notificationsEnabled,
-                            onCheckedChange = viewModel::toggleNotifications,
-                            colors = SwitchDefaults.colors(checkedTrackColor = ClayColor.AccentPrimary),
-                        )
-                    }
-                }
-            }
-            item {
-                SettingsSection(title = "About") {
-                    Text("AI Crypto Predictor · v1.0", color = ClayColor.TextSecondary)
-                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                    Text(
-                        "Predictions shown in this app are for informational purposes only and " +
-                            "are not investment advice.",
-                        color = ClayColor.TextSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                    ClayButton(
-                        text = "Privacy Policy",
-                        onClick = onNavigateToPrivacyPolicy,
-                        variant = ClayButtonVariant.Secondary,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            item {
-                SettingsSection(title = "Assistant") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+    val launchPicker = {
+        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+    val email = state.userEmail
+    val displayName = email?.substringBefore('@')?.replaceFirstChar { it.uppercase() } ?: "Your profile"
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(ClayColor.Background).statusBarsPadding(),
+        contentPadding = PaddingValues(ClaySpacing.Lg),
+        verticalArrangement = Arrangement.spacedBy(ClaySpacing.Lg),
+    ) {
+        item {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(ClayDimens.AvatarLarge)
+                            .clayShadow(shape = CircleShape, elevation = ClayElevation.Default)
+                            .clip(CircleShape)
+                            .background(ClayColor.Sand)
+                            .clickable(onClick = launchPicker),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Column {
-                            Text("Ask AI", color = ClayColor.TextPrimary)
-                            Text("Chat with an AI assistant about crypto", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        val photo = profilePhoto
+                        if (photo != null) {
+                            Image(photo.asImageBitmap(), contentDescription = "Profile photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        } else {
+                            Icon(Icons.Filled.Person, contentDescription = null, tint = ClayColor.TextSecondary, modifier = Modifier.size(48.dp))
                         }
-                        ClayButton(text = "Open", onClick = onNavigateToChatbot, variant = ClayButtonVariant.Secondary)
+                        if (photoUploading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(ClayDimens.SpinnerSize * 1.5f),
+                                color = ClayColor.AccentPrimary,
+                                strokeWidth = ClayDimens.SpinnerStroke,
+                            )
+                        }
                     }
-                }
-            }
-            item {
-                SettingsSection(title = "Markets") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
+                        modifier = Modifier.size(32.dp).background(ClayColor.AccentGold, CircleShape).clickable(onClick = launchPicker),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Column {
-                            Text("Exchange Map", color = ClayColor.TextPrimary)
-                            Text("Major exchanges by live 24h volume", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
-                        }
-                        ClayButton(text = "Open", onClick = onNavigateToExchangeMap, variant = ClayButtonVariant.Secondary)
+                        Icon(Icons.Filled.CameraAlt, contentDescription = "Change profile photo", tint = ClayColor.OnDark, modifier = Modifier.size(16.dp))
                     }
                 }
-            }
-            if (com.stockpredictor.app.BuildConfig.DEBUG) {
-                item {
-                    SettingsSection(title = "Crash Reporting (debug only)") {
-                        Text(
-                            "Forces a real crash so it can be verified in the Firebase Crashlytics " +
-                                "console. Not shown in release builds.",
-                            color = ClayColor.TextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                        ClayButton(
-                            text = "Force Test Crash",
-                            onClick = { throw RuntimeException("Phase 6 Crashlytics test crash") },
-                            variant = ClayButtonVariant.Secondary,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                Spacer(Modifier.height(ClaySpacing.Md))
+                Text(displayName, color = ClayColor.TextPrimary, style = MaterialTheme.typography.headlineSmall)
+                Text(email ?: "", color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                photoError?.let {
+                    Spacer(Modifier.height(ClaySpacing.Xs))
+                    Text(it, color = ClayColor.AccentCoral, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            if (com.stockpredictor.app.BuildConfig.DEBUG) {
-                item {
-                    SettingsSection(title = "Preview UI States") {
-                        Text(
-                            "Force any data screen into a given state to verify it renders correctly.",
-                            color = ClayColor.TextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-                        DebugModeRow(selected = state.debugMode, onSelect = viewModel::setDebugMode)
-                    }
-                }
+        }
+        item {
+            SettingsGroup(title = "My Money") {
+                SettingsRow(Icons.Filled.AccountBalanceWallet, "My Wallet", "Connect MetaMask and see your real portfolio", onNavigateToWallet)
             }
-            item {
-                ClayButton(
-                    text = "Log Out",
-                    onClick = viewModel::logout,
-                    variant = ClayButtonVariant.Secondary,
-                    modifier = Modifier.fillMaxWidth(),
+        }
+        item {
+            SettingsGroup(title = "Learn") {
+                SettingsRow(Icons.Filled.MenuBook, "Tutorials", "Crypto trading and how to use crypto", onNavigateToTutorials)
+                RowDivider()
+                SettingsRow(Icons.Filled.PlayCircle, "Demo", "A guided tour of this app", onNavigateToDemo)
+            }
+        }
+        item {
+            SettingsGroup(title = "Explore") {
+                SettingsRow(Icons.Filled.Map, "Our Offices & Map", "Maharashtra offices, directions and exchanges", onNavigateToExchangeMap)
+                RowDivider()
+                SettingsRow(Icons.Filled.SmartToy, "Ask AI", "Chat with an AI assistant about crypto", onNavigateToChatbot)
+            }
+        }
+        item {
+            SettingsGroup(title = "Preferences") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = ClaySpacing.Xs),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Push notifications", color = ClayColor.TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = state.notificationsEnabled,
+                        onCheckedChange = viewModel::toggleNotifications,
+                        colors = SwitchDefaults.colors(checkedTrackColor = ClayColor.AccentPrimary),
+                    )
+                }
+                RowDivider()
+                SettingsRow(Icons.Filled.PrivacyTip, "Privacy Policy", null, onNavigateToPrivacyPolicy)
+            }
+        }
+        item {
+            SettingsGroup(title = "About") {
+                Text("AI Crypto Predictor · v1.0", color = ClayColor.TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.height(ClaySpacing.Xs))
+                Text(
+                    "Predictions shown in this app are for informational purposes only and " +
+                        "are not investment advice.",
+                    color = ClayColor.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
+        }
+        item {
+            ClayButton(
+                text = "Log Out",
+                onClick = viewModel::logout,
+                variant = ClayButtonVariant.Secondary,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
 
 @Composable
-private fun SettingsSection(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+private fun SettingsGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     Column {
-        Text(title, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(ClaySpacing.Sm))
-        ClayCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            title,
+            color = ClayColor.TextSecondary,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(start = ClaySpacing.Sm, bottom = ClaySpacing.Sm),
+        )
+        ClayCard(modifier = Modifier.fillMaxWidth(), shape = ClayShapes.Large) {
             Column(content = content)
         }
     }
 }
 
 @Composable
-private fun DebugModeRow(selected: DebugUiMode, onSelect: (DebugUiMode) -> Unit) {
+private fun SettingsRow(icon: ImageVector, title: String, subtitle: String?, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(ClaySpacing.Sm),
+        modifier = Modifier.fillMaxWidth().clip(ClayShapes.Small).clickable(onClick = onClick).padding(vertical = ClaySpacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        DebugUiMode.entries.forEach { mode ->
-            ClayButton(
-                text = debugModeLabel(mode),
-                onClick = { onSelect(mode) },
-                variant = if (mode == selected) ClayButtonVariant.Primary else ClayButtonVariant.Secondary,
-            )
+        Box(
+            modifier = Modifier.size(40.dp).background(ClayColor.Sand, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = ClayColor.AccentPrimary, modifier = Modifier.size(20.dp))
         }
+        Spacer(Modifier.width(ClaySpacing.Md))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = ClayColor.TextPrimary, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(subtitle, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = ClayColor.TextSecondary)
     }
 }
 
-private fun debugModeLabel(mode: DebugUiMode): String = when (mode) {
-    DebugUiMode.NONE -> "Normal"
-    DebugUiMode.LOADING -> "Loading"
-    DebugUiMode.EMPTY -> "Empty"
-    DebugUiMode.ERROR -> "Error"
+@Composable
+private fun RowDivider() {
+    Box(Modifier.fillMaxWidth().height(1.dp).background(ClayColor.Sand))
 }

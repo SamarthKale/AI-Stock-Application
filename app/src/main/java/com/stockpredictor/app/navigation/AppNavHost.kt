@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.SmartToy
@@ -16,7 +17,12 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stockpredictor.app.data.learn.LearnCategory
+import com.stockpredictor.app.data.learn.LearnType
 import com.stockpredictor.app.ui.components.AppDrawerContent
+import com.stockpredictor.app.ui.screens.learn.LearnScreen
+import com.stockpredictor.app.ui.screens.learn.PdfReaderScreen
+import com.stockpredictor.app.ui.screens.learn.VideoPlayerScreen
 import com.stockpredictor.app.ui.components.DrawerItem
 import com.stockpredictor.app.ui.profile.UserProfileViewModel
 import kotlinx.coroutines.launch
@@ -123,6 +129,7 @@ fun AppNavHost(
                 items = listOf(
                     DrawerItem("Home", Icons.Filled.Home) { drawerGo(Destinations.Home.route, topLevel = true) },
                     DrawerItem("My Wallet", Icons.Filled.AccountBalanceWallet) { drawerGo(Destinations.Portfolio.route, topLevel = true) },
+                    DrawerItem("Tutorials & Demo", Icons.Filled.MenuBook) { drawerGo(Destinations.Learn.createRoute("all")) },
                     DrawerItem("Our Offices", Icons.Filled.Map) { drawerGo(Destinations.ExchangeMap.route) },
                     DrawerItem("Ask AI", Icons.Filled.SmartToy) { drawerGo(Destinations.Chatbot.route) },
                     DrawerItem("Notifications", Icons.Filled.Notifications) { drawerGo(Destinations.Notifications.route) },
@@ -241,6 +248,16 @@ fun AppNavHost(
                     onNavigateToChatbot = { navController.navigate(Destinations.Chatbot.route) },
                     onNavigateToExchangeMap = { navController.navigate(Destinations.ExchangeMap.route) },
                     onNavigateToPrivacyPolicy = { navController.navigate(Destinations.PrivacyPolicy.route) },
+                    onNavigateToWallet = {
+                        navController.navigate(Destinations.Portfolio.route) {
+                            popUpTo(Destinations.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToTutorials = { navController.navigate(Destinations.Learn.createRoute("tutorial")) },
+                    onNavigateToDemo = { navController.navigate(Destinations.Learn.createRoute("demo")) },
+                    onProfilePhotoChanged = profileViewModel::refreshPhoto,
                 )
             }
             composable(Destinations.Chatbot.route) {
@@ -251,6 +268,44 @@ fun AppNavHost(
             }
             composable(Destinations.PrivacyPolicy.route) {
                 PrivacyPolicyScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = Destinations.Learn.route,
+                arguments = listOf(navArgument(Destinations.Learn.ARG_CATEGORY) { type = NavType.StringType }),
+            ) { entry ->
+                val category = when (entry.arguments?.getString(Destinations.Learn.ARG_CATEGORY)) {
+                    "tutorial" -> LearnCategory.TUTORIAL
+                    "demo" -> LearnCategory.DEMO
+                    else -> null
+                }
+                LearnScreen(
+                    category = category,
+                    onBack = { navController.popBackStack() },
+                    onOpenItem = { item ->
+                        navController.navigate(
+                            if (item.type == LearnType.VIDEO) Destinations.VideoPlayer.createRoute(item.id)
+                            else Destinations.PdfReader.createRoute(item.id)
+                        )
+                    },
+                )
+            }
+            composable(
+                route = Destinations.VideoPlayer.route,
+                arguments = listOf(navArgument(Destinations.VideoPlayer.ARG_ITEM_ID) { type = NavType.StringType }),
+            ) { entry ->
+                VideoPlayerScreen(
+                    itemId = entry.arguments?.getString(Destinations.VideoPlayer.ARG_ITEM_ID).orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destinations.PdfReader.route,
+                arguments = listOf(navArgument(Destinations.PdfReader.ARG_ITEM_ID) { type = NavType.StringType }),
+            ) { entry ->
+                PdfReaderScreen(
+                    itemId = entry.arguments?.getString(Destinations.PdfReader.ARG_ITEM_ID).orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
             }
             composable(Destinations.Search.route) {
                 SearchScreen(
