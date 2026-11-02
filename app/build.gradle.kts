@@ -21,6 +21,10 @@ val coinGeckoApiKey: String = localProperties.getProperty("COINGECKO_API_KEY", "
 // Phase 5: Spring Boot backend, for real predictions. 10.0.2.2 is the standard Android emulator
 // alias for the host machine's localhost — override in local.properties (BACKEND_BASE_URL=...)
 // for a physical device (LAN IP) or a deployed backend later.
+// v2 wallet: free project id from https://dashboard.reown.com (add the Android package
+// com.stockpredictor.app to its allowed apps). Blank is fine -- "Connect MetaMask" is then hidden and
+// the Wallet screen falls back to pasting a public address; nothing crashes.
+val reownProjectId: String = localProperties.getProperty("REOWN_PROJECT_ID", "")
 val backendBaseUrl: String = localProperties.getProperty("BACKEND_BASE_URL", "http://10.0.2.2:8080/")
 
 // Phase 6: release signing. keystore.properties (gitignored, same pattern as local.properties)
@@ -58,6 +62,7 @@ android {
         // code; that's expected for a Demo-tier client key (see RetrofitClient's doc comment).
         buildConfigField("String", "COINGECKO_API_KEY", "\"$coinGeckoApiKey\"")
         buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
+        buildConfigField("String", "REOWN_PROJECT_ID", "\"$reownProjectId\"")
     }
 
     signingConfigs {
@@ -151,6 +156,11 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.androidx.core.splashscreen)
+    // v2 wallet: Reown (WalletConnect) AppKit -- "Connect MetaMask". Pinned to 1.6.12 (Kotlin 2.2 build).
+    // Pulls SQLCipher/native code transitively: always re-run scripts/check_16kb.py after changing it.
+    implementation(platform(libs.reown.bom))
+    implementation(libs.reown.android.core)
+    implementation(libs.reown.appkit)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

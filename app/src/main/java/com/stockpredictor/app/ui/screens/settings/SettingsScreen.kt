@@ -101,7 +101,7 @@ fun SettingsScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ClayColor.Background).statusBarsPadding(),
-        contentPadding = PaddingValues(ClaySpacing.Lg),
+        contentPadding = PaddingValues(start = ClaySpacing.Lg, end = ClaySpacing.Lg, top = ClaySpacing.Lg, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(ClaySpacing.Lg),
     ) {
         item {

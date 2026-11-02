@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
 import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
+import com.stockpredictor.app.data.remote.wallet.WalletSessionManager
 import com.stockpredictor.app.data.remote.firebase.ProfilePhotoRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +66,7 @@ class UserProfileViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             syncRepository.stopListening()
             syncRepository.clearLocalCache()
+            WalletSessionManager.disconnect(getApplication()) // the next account must not inherit this wallet
             auth.signOut()
             _photo.value = null
             _logoutEvent.emit(Unit)

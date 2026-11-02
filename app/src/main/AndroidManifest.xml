@@ -13,6 +13,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
+        tools:replace="android:dataExtractionRules"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -44,6 +45,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="stockpredictor" />
+            </intent-filter>
+            <!-- WalletConnect redirect: after the user approves in MetaMask/another wallet, the wallet
+                 opens stockpredictor-wc://request to bring them back here (see WalletSessionManager). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="stockpredictor-wc" />
             </intent-filter>
         </activity>
 

@@ -34,10 +34,28 @@ private val sections = listOf(
             "store your raw password ourselves.",
     ),
     PrivacySection(
-        "Watchlist & portfolio sync (Firestore)",
-        "Your watchlist and portfolio holdings are stored locally on this device and synced to " +
-            "Firebase Firestore under your account so they carry over to your other signed-in " +
-            "devices. This data is not shared with any other user.",
+        "Watchlist sync (Firestore)",
+        "Your watchlist is stored locally on this device and synced to Firebase Firestore under " +
+            "your account so it carries over to your other signed-in devices. This data is not " +
+            "shared with any other user. Your wallet address (see \"Wallet\" below) is not synced " +
+            "and stays on this device.",
+    ),
+    PrivacySection(
+        "Profile photo",
+        "If you add a profile photo, a compressed copy is stored in Firebase Firestore under your " +
+            "account so it appears on your other devices. You can replace it at any time.",
+    ),
+    PrivacySection(
+        "Wallet (MetaMask / WalletConnect)",
+        "The Portfolio tab shows the balances of a wallet you choose. We only ever receive your " +
+            "PUBLIC wallet address - never a private key or recovery phrase, and the app cannot move " +
+            "your funds. If you tap \"Connect MetaMask\", the connection is set up through the " +
+            "WalletConnect network operated by Reown (the connection request and your public " +
+            "address pass through its relay servers). You can instead paste an address manually. " +
+            "To read balances, your public address is sent to public blockchain RPC endpoints " +
+            "(publicnode.com) - blockchain data is public by nature, but those providers can see " +
+            "your IP address and the address queried. The address is stored locally on this device " +
+            "and removed when you tap Disconnect or log out.",
     ),
     PrivacySection(
         "Push notifications (Firebase Cloud Messaging)",
@@ -58,8 +76,8 @@ private val sections = listOf(
     ),
     PrivacySection(
         "On-device momentum classifier",
-        "The on-device momentum feature runs entirely on this device using a local TensorFlow " +
-            "Lite model and your cached price history. Nothing is uploaded for this feature — it " +
+        "The on-device momentum feature runs entirely on this device using a local LiteRT " +
+            "(TensorFlow Lite) model and your cached price history. Nothing is uploaded for this feature — it " +
             "works even in airplane mode.",
     ),
     PrivacySection(
@@ -70,12 +88,21 @@ private val sections = listOf(
             "servers.",
     ),
     PrivacySection(
-        "Maps",
-        "The Exchange Map screen displays static exchange locations using MapLibre with map " +
-            "tiles from OpenFreeMap, built from OpenStreetMap data. Loading the map sends your " +
-            "device's IP address to OpenFreeMap's tile servers to fetch map imagery, the same way " +
-            "any map image loads over the network — no account, search query, or device location " +
-            "is sent. This screen does not access or share your device's location.",
+        "Maps & location",
+        "The Offices & Map screen shows our offices and global exchange locations using MapLibre " +
+            "with map tiles from OpenFreeMap, built from OpenStreetMap data. Loading the map sends " +
+            "your device's IP address to OpenFreeMap's tile servers, the same way any map image " +
+            "loads over the network. Your location is used ONLY if you tap the \"locate me\" " +
+            "button and grant the permission: the app then requests a single one-time fix (it never " +
+            "tracks you in the background) through Google Play services' location provider, " +
+            "calculates the distance to our offices on your device, and does not upload your " +
+            "location to our servers. The \"Directions\" button opens the maps app you choose, " +
+            "passing it the office's address coordinates.",
+    ),
+    PrivacySection(
+        "Tutorials & demo",
+        "The tutorial videos and documents are bundled inside the app and play on this device. " +
+            "Viewing them does not send any information anywhere.",
     ),
     PrivacySection(
         "Crash diagnostics (Firebase Crashlytics)",

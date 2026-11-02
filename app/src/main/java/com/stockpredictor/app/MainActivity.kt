@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.stockpredictor.app.data.remote.wallet.WalletSessionManager
 import com.stockpredictor.app.navigation.AppNavHost
 import com.stockpredictor.app.ui.theme.ClayTheme
 
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen() // must precede super.onCreate: swaps the splash theme for the app theme
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WalletSessionManager.initialize(application) // no-op without REOWN_PROJECT_ID; never throws
         deepLinkIntent = intent
         setContent {
             ClayTheme {
