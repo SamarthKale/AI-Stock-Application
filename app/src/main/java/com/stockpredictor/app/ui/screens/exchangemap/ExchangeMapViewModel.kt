@@ -12,6 +12,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.stockpredictor.app.audio.MarketBriefingSpeaker
+import com.stockpredictor.app.data.OfficeData
+import com.stockpredictor.app.data.OfficeLocation
 import com.stockpredictor.app.data.repository.ExchangeMarketInfo
 import com.stockpredictor.app.data.repository.ExchangeRepository
 import com.stockpredictor.app.data.repository.toUserMessage
@@ -40,15 +42,22 @@ import kotlinx.coroutines.withTimeoutOrNull
 sealed interface LocateMeState {
     data object Idle : LocateMeState
     data object Locating : LocateMeState
+    /** [office] is always present (offices are static data, never "still loading"); the nearest
+     *  [exchange] is only known when the live exchange list had loaded by the time of the fix. */
     data class Found(
-        val exchange: ExchangeMarketInfo,
-        val distanceKm: Double,
+        val office: OfficeLocation,
+        val officeDistanceKm: Double,
         val userLatitude: Double,
         val userLongitude: Double,
+        val exchange: ExchangeMarketInfo? = null,
+        val exchangeDistanceKm: Double? = null,
     ) : LocateMeState
     data object Denied : LocateMeState
     data class Unavailable(val message: String) : LocateMeState
 }
+
+/** Which pins the map shows. Offices is the default -- it's the company's own locations. */
+enum class MapFilter { OFFICES, EXCHANGES, ALL }
 
 private const val LOCATION_TIMEOUT_MS = 15_000L
 private const val EARTH_RADIUS_KM = 6371.0
@@ -56,7 +65,7 @@ private const val EARTH_RADIUS_KM = 6371.0
 /** Great-circle distance between two lat/lon points, in kilometers -- client-side only, no
  *  geocoding/address lookup of any kind (Practical 7's GPS gap is closed with raw coordinates
  *  against the already-known static [com.stockpredictor.app.data.ExchangeData] positions). */
-private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+internal fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val dLat = Math.toRadians(lat2 - lat1)
     val dLon = Math.toRadians(lon2 - lon1)
     val a = sin(dLat / 2).let { it * it } +
@@ -87,6 +96,12 @@ class ExchangeMapViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _locateState = MutableStateFlow<LocateMeState>(LocateMeState.Idle)
     val locateState: StateFlow<LocateMeState> = _locateState.asStateFlow()
+
+    private val _filter = MutableStateFlow(MapFilter.OFFICES)
+    val filter: StateFlow<MapFilter> = _filter.asStateFlow()
+    fun setFilter(filter: MapFilter) { _filter.value = filter }
+
+    val offices: List<OfficeLocation> = OfficeData.all
 
     private var loadJob: Job? = null
     private var locateJob: Job? = null
@@ -145,21 +160,30 @@ class ExchangeMapViewModel(application: Application) : AndroidViewModel(applicat
                     return@launch
                 }
 
-                val exchanges = (_realState.value as? UiState.Success)?.data
-                if (exchanges.isNullOrEmpty()) {
-                    _locateState.value = LocateMeState.Unavailable("Exchange data isn't loaded yet.")
-                    return@launch
+                // Offices are static, so a fix can always resolve to a nearest office -- even while
+                // (or if) the live exchange list is still loading / unavailable.
+                val nearestOffice = offices.minBy {
+                    haversineKm(location.latitude, location.longitude, it.latitude, it.longitude)
                 }
-
-                val nearest = exchanges.minBy {
+                val officeDistanceKm = haversineKm(
+                    location.latitude, location.longitude, nearestOffice.latitude, nearestOffice.longitude,
+                )
+                val exchanges = (_realState.value as? UiState.Success)?.data.orEmpty()
+                val nearestExchange = exchanges.minByOrNull {
                     haversineKm(location.latitude, location.longitude, it.location.latitude, it.location.longitude)
                 }
-                val distanceKm = haversineKm(
-                    location.latitude, location.longitude,
-                    nearest.location.latitude, nearest.location.longitude,
+                val exchangeDistanceKm = nearestExchange?.let {
+                    haversineKm(location.latitude, location.longitude, it.location.latitude, it.location.longitude)
+                }
+                _locateState.value = LocateMeState.Found(
+                    office = nearestOffice,
+                    officeDistanceKm = officeDistanceKm,
+                    userLatitude = location.latitude,
+                    userLongitude = location.longitude,
+                    exchange = nearestExchange,
+                    exchangeDistanceKm = exchangeDistanceKm,
                 )
-                _locateState.value = LocateMeState.Found(nearest, distanceKm, location.latitude, location.longitude)
-                briefingSpeaker.speak(buildLocateBriefingText(nearest, distanceKm))
+                briefingSpeaker.speak(buildLocateBriefingText(nearestOffice, officeDistanceKm, nearestExchange, exchangeDistanceKm))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
@@ -180,14 +204,21 @@ class ExchangeMapViewModel(application: Application) : AndroidViewModel(applicat
         cont.invokeOnCancellation { cancellationTokenSource.cancel() }
     }
 
-    /** Composed entirely from already-loaded data (the live [ExchangeMarketInfo] the exchange list
-     *  already fetched, plus the just-computed haversine distance) -- no new network call, same
-     *  "no new network call for the briefing text" discipline [MarketBriefingSpeaker]/
-     *  HomeViewModel's briefing already follow. Rounded numbers, simple sentence structure. */
-    private fun buildLocateBriefingText(info: ExchangeMarketInfo, distanceKm: Double): String {
-        val volumeText = info.tradeVolume24hBtc?.let { "${it.roundToInt()} BTC" } ?: "unavailable"
-        return "Nearest exchange: ${info.location.displayName}, ${info.location.city}, " +
-            "${distanceKm.roundToInt()} kilometers away. 24 hour volume: $volumeText."
+    /** Composed entirely from already-loaded data (static office list, plus the live
+     *  [ExchangeMarketInfo] if the exchange list had loaded) -- no new network call, same "no new
+     *  network call for the briefing text" discipline [MarketBriefingSpeaker] already follows.
+     *  Rounded numbers, simple sentence structure. */
+    private fun buildLocateBriefingText(
+        office: OfficeLocation,
+        officeKm: Double,
+        exchange: ExchangeMarketInfo?,
+        exchangeKm: Double?,
+    ): String {
+        val officeLine = "Nearest office: ${office.city}, ${officeKm.roundToInt()} kilometers away."
+        if (exchange == null || exchangeKm == null) return officeLine
+        val volumeText = exchange.tradeVolume24hBtc?.let { "${it.roundToInt()} BTC" } ?: "unavailable"
+        return "$officeLine Nearest exchange: ${exchange.location.displayName}, " +
+            "${exchangeKm.roundToInt()} kilometers away. 24 hour volume: $volumeText."
     }
 
     override fun onCleared() {
