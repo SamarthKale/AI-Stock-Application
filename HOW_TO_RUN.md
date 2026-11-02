@@ -71,6 +71,18 @@ adb shell am start -n com.stockpredictor.app/.MainActivity
    Chatbot ("Ask AI" in Settings) → Exchange Map (Settings) → Play Briefing (Home, TTS)
 
 ## Notes
+- **MetaMask connect (optional, free):** create a project at https://dashboard.reown.com, add the Android
+  package `com.stockpredictor.app` to its allowed apps, and put `REOWN_PROJECT_ID=<id>` in
+  `local.properties`. Without it the "Connect MetaMask" button is hidden and "Enter a wallet address"
+  (paste any public `0x…` address) still shows real balances. Test the full handshake on a real phone
+  with the MetaMask app installed.
+- **Tutorials / Demo files:** copy `.mp4` files into `app/src/main/res/raw/` (lowercase, underscores) and
+  `.pdf` files into `app/src/main/assets/learn/`, then add one `LearnItem` per file in
+  `data/learn/LearnContent.kt`. Two sample files ship today — replace them.
+- **Office addresses:** edit `app/src/main/java/com/stockpredictor/app/data/OfficeData.kt`
+  (placeholders today; add a `phone` to enable the Call button).
+- **16 KB check:** after building, run `python -I scripts/check_16kb.py app/build/outputs/apk/debug/app-debug.apk`
+  (or the release APK); it must print `RESULT: PASS`.
 - Predictions/chatbot require the backend (step 2) to be up and healthy — without it
   those screens show a real error state with retry, not mock data (by design).
 - Live crypto prices come directly from CoinGecko (no backend needed for Home/Watchlist/Search).
