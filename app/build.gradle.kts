@@ -135,7 +135,7 @@ dependencies {
     // model API) — the feature vector is 3 floats, no image/text preprocessing helpers needed,
     // and this avoids ML Kit's Play-Services-backed model-download path, which would undermine
     // the guaranteed-offline point of an on-device feature.
-    implementation(libs.tensorflow.lite)
+    implementation(libs.litert)
     // Phase 5c: exchange map, MapLibre Native Android SDK + OpenFreeMap (see ExchangeMapScreen's
     // doc comment) -- no API key, no manifest placeholder needed (unlike the Google Maps SDK this
     // replaced). Hosted via plain AndroidView, so no separate Compose-interop artifact is needed.

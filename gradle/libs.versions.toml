@@ -16,7 +16,9 @@ kotlinxSerializationJson = "1.7.3"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 retrofitKotlinxSerializationConverter = "1.0.0"
-tensorflowLite = "2.17.0"
+# LiteRT (successor to org.tensorflow:tensorflow-lite): same org.tensorflow.lite.Interpreter API, but its
+# native libs are 16 KB page-aligned (tensorflow-lite 2.17.0's x86_64 .so was not -> "not 16 KB compatible" dialog).
+litert = "1.4.2"
 # Phase 5c map engine, live-verified current stable release (org.maplibre.gl:android-sdk on Maven
 # Central) at implementation time -- replaces Google Maps SDK's maps-compose (removed below).
 maplibre = "13.6.0"
@@ -54,7 +56,7 @@ retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = 
 retrofit-kotlinx-serialization-converter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerializationConverter" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
-tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
+litert = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
 maplibre-android-sdk = { group = "org.maplibre.gl", name = "android-sdk", version.ref = "maplibre" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
