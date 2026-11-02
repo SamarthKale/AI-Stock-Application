@@ -11,7 +11,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import com.stockpredictor.app.R
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +60,14 @@ object ClayDimens {
     val ReadRowIndent: Dp = ClaySpacing.Md + UnreadDotSize // aligns read rows with unread rows' dot+gap width
     val IconTextGap: Dp = 2.dp                          // tight gap between an inline icon and its label
     val ChatbotFabSize: Dp = 48.dp                      // global Chatbot FAB (see ChatbotFab / AppNavHost)
+    val HeroCardWidth: Dp = 168.dp                      // HeroImageCard in horizontal carousels
+    val HeroCardHeight: Dp = 232.dp
+    val AvatarSmall: Dp = 36.dp                         // CoinAvatar in list rows
+    val AvatarMedium: Dp = 48.dp                        // AvatarRow items, drawer header
+    val AvatarLarge: Dp = 96.dp                         // Profile header photo
+    val NavPillHeight: Dp = 72.dp                       // PillBottomNav
+    val DrawerWidth: Dp = 300.dp
+    val OfficeCardWidth: Dp = 280.dp                    // Map's office carousel cards
 }
 
 /**
@@ -76,7 +88,7 @@ fun Modifier.clayShadow(
 ): Modifier = this.drawBehind {
     val outline = shape.createOutline(size, layoutDirection, this)
     val path = Path().apply { addOutline(outline) }
-    val offsetPx = elevation.toPx() / 2f
+    val offsetPx = elevation.toPx() / 2.5f
     val darkOffset = if (pressed) -offsetPx else offsetPx
     val lightOffset = if (pressed) offsetPx else -offsetPx
 
@@ -88,21 +100,45 @@ fun Modifier.clayShadow(
     }
 }
 
+/** Manrope (OFL, bundled variable font in res/font/manrope.ttf) — one file, every weight. */
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+private fun manrope(weight: FontWeight) = Font(
+    resId = R.font.manrope,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+)
+
+val ClayFontFamily = FontFamily(
+    manrope(FontWeight.Normal),
+    manrope(FontWeight.Medium),
+    manrope(FontWeight.SemiBold),
+    manrope(FontWeight.Bold),
+    manrope(FontWeight.ExtraBold),
+)
+
 private val ClayTypography = Typography(
-    headlineSmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp),
-    titleLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
-    bodyLarge = TextStyle(fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = 0.3.sp),
-    bodyMedium = TextStyle(fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.2.sp),
-    bodySmall = TextStyle(fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
-    labelLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 20.sp),
-    labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
-    labelSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 14.sp),
+    displayMedium = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, lineHeight = 46.sp),
+    displaySmall = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 32.sp, lineHeight = 38.sp),
+    headlineMedium = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp),
+    headlineSmall = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp),
+    titleLarge = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp),
+    titleMedium = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
+    bodyLarge = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+    labelLarge = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 20.sp),
+    labelMedium = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
+    labelSmall = TextStyle(fontFamily = ClayFontFamily, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 14.sp),
 )
 
 private val ClayColorScheme = lightColorScheme(
     primary = ClayColor.AccentPrimary,
-    onPrimary = ClayColor.ClayBase,
+    onPrimary = ClayColor.OnDark,
+    primaryContainer = ClayColor.Sand,
+    onPrimaryContainer = ClayColor.TextPrimary,
+    surfaceVariant = ClayColor.Sand,
+    onSurfaceVariant = ClayColor.TextSecondary,
+    outline = ClayColor.TextSecondary,
     background = ClayColor.Background,
     onBackground = ClayColor.TextPrimary,
     surface = ClayColor.ClayBase,
@@ -113,7 +149,7 @@ private val ClayColorScheme = lightColorScheme(
     onError = ClayColor.ClayBase,
 )
 
-/** Root theme wrapper — every screen sits inside exactly one of these, applied once in MainActivity. */
+/** Root theme wrapper (v2 warm minimalist) — every screen sits inside exactly one of these, applied once in MainActivity. */
 @Composable
 fun ClayTheme(content: @Composable () -> Unit) {
     MaterialTheme(

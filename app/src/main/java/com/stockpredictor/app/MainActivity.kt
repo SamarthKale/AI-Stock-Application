@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.stockpredictor.app.navigation.AppNavHost
 import com.stockpredictor.app.ui.theme.ClayTheme
 
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
     private var deepLinkIntent by mutableStateOf<Intent?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen() // must precede super.onCreate: swaps the splash theme for the app theme
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         deepLinkIntent = intent

@@ -28,7 +28,7 @@ import com.stockpredictor.app.ui.theme.ClaySpacing
 import com.stockpredictor.app.ui.theme.ClayTheme
 import com.stockpredictor.app.ui.theme.clayShadow
 
-enum class ClayButtonVariant { Primary, Secondary, Text }
+enum class ClayButtonVariant { Primary, Secondary, Text, Gold }
 
 @Composable
 fun ClayButton(
@@ -48,15 +48,16 @@ fun ClayButton(
         variant == ClayButtonVariant.Text -> Color.Transparent
         !enabled -> ClayColor.AccentPrimaryDisabled
         variant == ClayButtonVariant.Primary -> ClayColor.AccentPrimary
+        variant == ClayButtonVariant.Gold -> ClayColor.AccentGold
         else -> ClayColor.ClayBase
     }
-    val contentColor = if (variant == ClayButtonVariant.Primary) ClayColor.ClayBase else ClayColor.TextPrimary
+    val contentColor = if (variant == ClayButtonVariant.Primary || variant == ClayButtonVariant.Gold) ClayColor.OnDark else ClayColor.TextPrimary
 
     Box(
         modifier = modifier
             .scale(scale)
-            .let { base -> if (variant == ClayButtonVariant.Text) base else base.clayShadow(shape = ClayShapes.Medium, pressed = pressed) }
-            .background(color = backgroundColor, shape = ClayShapes.Medium)
+            .let { base -> if (variant == ClayButtonVariant.Text) base else base.clayShadow(shape = ClayShapes.Pill, pressed = pressed) }
+            .background(color = backgroundColor, shape = ClayShapes.Pill)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

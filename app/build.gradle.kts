@@ -143,6 +143,14 @@ dependencies {
     // Practical 7: one-shot FusedLocationProviderClient for Exchange Map's "Locate me" action --
     // see ExchangeMapViewModel's doc comment. No background-location dependency added.
     implementation(libs.play.services.location)
+    // v2 redesign: coin logos (Coil 3, pure Kotlin), tutorial video playback (Media3, no native
+    // libs), launch splash. None of these add 4 KB-aligned native code -- verify with
+    // scripts/check_16kb.py after any dependency change.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.androidx.core.splashscreen)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

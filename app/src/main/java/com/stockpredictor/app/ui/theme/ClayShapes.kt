@@ -3,14 +3,16 @@ package com.stockpredictor.app.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
-/** Shared corner-radius presets (20-28dp per the design system) so components never invent their own. */
+/** Shared corner-radius presets so components never invent their own (v2: slightly rounder). */
 object ClayShapes {
-    val Small = RoundedCornerShape(20.dp)
-    val Medium = RoundedCornerShape(24.dp)
-    val Large = RoundedCornerShape(28.dp)
+    val Small = RoundedCornerShape(22.dp)
+    val Medium = RoundedCornerShape(28.dp)
+    val Large = RoundedCornerShape(32.dp)
+    /** Big photo-style hero cards (HeroImageCard) and the drawer panel. */
+    val Hero = RoundedCornerShape(36.dp)
 
-    // Below the 20-28dp surface scale on purpose: these are small in-line accents
-    // (progress-bar track/fill, filter/recent-search pill chips), not clay surfaces.
+    // Small in-line accents (progress-bar track/fill, filter/recent-search pill chips),
+    // not surfaces.
     val Bar = RoundedCornerShape(6.dp)
     val Pill = RoundedCornerShape(50)
 }
