@@ -32,6 +32,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,8 +86,13 @@ fun VideoPlayerScreen(itemId: String, onBack: () -> Unit) {
 
     // Pause when backgrounded so audio never keeps playing behind another app / the lock screen.
     val lifecycleOwner = LocalLifecycleOwner.current
+    val hostActivity = context as? android.app.Activity
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_PAUSE) viewModel.pause() }
+        val observer = LifecycleEventObserver { _, event ->
+            // A rotation (fullscreen toggle) recreates the Activity and fires ON_PAUSE too, but the
+            // user hasn't left -- only pause when the app is genuinely going to the background.
+            if (event == Lifecycle.Event.ON_PAUSE && hostActivity?.isChangingConfigurations != true) viewModel.pause()
+        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -100,24 +107,45 @@ fun VideoPlayerScreen(itemId: String, onBack: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
+    // Immersive fullscreen: hide the status/navigation bars while fullscreen, restore them afterwards.
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(fullscreen) {
+        val window = activity?.window
+        val controller = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, view) }
+        if (fullscreen) {
+            controller?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+    }
     BackHandler(enabled = fullscreen) { fullscreen = false }
 
-    Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
-        if (!fullscreen) ClayAppBar(title = state.title.ifBlank { "Video" }, onBack = onBack)
-
-        if (state.error != null) {
+    if (state.error != null) {
+        Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
+            ClayAppBar(title = state.title.ifBlank { "Video" }, onBack = onBack)
             ErrorState(message = state.error!!, onRetry = null, modifier = Modifier.weight(1f))
-            return@Column
         }
+        return
+    }
 
+    // Fullscreen controls get out of the way: they hide 3 s after playback starts and reappear on a
+    // tap (or whenever playback is paused/ended, so a paused video is never left without controls).
+    var controlsVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(controlsVisible, state.isPlaying, fullscreen) {
+        if (fullscreen && controlsVisible && state.isPlaying) {
+            delay(3_000)
+            controlsVisible = false
+        }
+    }
+
+    val videoSurface: @Composable (Modifier) -> Unit = { modifier ->
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = if (fullscreen) 0.dp else ClaySpacing.Lg)
+            modifier = modifier
                 .background(Color.Black, if (fullscreen) androidx.compose.ui.graphics.RectangleShape else ClayShapes.Large)
-                .clickable { viewModel.togglePlayPause() }
-                .semantics { contentDescription = "Video. Tap to play or pause." },
+                .clickable { if (fullscreen) controlsVisible = !controlsVisible else viewModel.togglePlayPause() }
+                .semantics { contentDescription = if (fullscreen) "Video. Tap to show controls." else "Video. Tap to play or pause." },
             contentAlignment = Alignment.Center,
         ) {
             AndroidView(
@@ -134,7 +162,8 @@ fun VideoPlayerScreen(itemId: String, onBack: () -> Unit) {
             )
             if (state.isBuffering) CircularProgressIndicator(color = ClayColor.OnDark)
         }
-
+    }
+    val controls: @Composable (Modifier) -> Unit = { modifier ->
         Controls(
             state = state,
             fullscreen = fullscreen,
@@ -143,7 +172,30 @@ fun VideoPlayerScreen(itemId: String, onBack: () -> Unit) {
             onSkipForward = viewModel::skipForward,
             onSeek = viewModel::seekTo,
             onToggleFullscreen = { fullscreen = !fullscreen },
+            modifier = modifier,
         )
+    }
+
+    if (fullscreen) {
+        // Landscape: the video fills the whole screen and the controls float over its bottom edge.
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            videoSurface(Modifier.fillMaxSize())
+            if (controlsVisible || !state.isPlaying) {
+                controls(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(0.82f)
+                        .padding(bottom = ClaySpacing.Md)
+                        .background(ClayColor.ClayBase.copy(alpha = 0.94f), ClayShapes.Large),
+                )
+            }
+        }
+    } else {
+        Column(modifier = Modifier.fillMaxSize().background(ClayColor.Background)) {
+            ClayAppBar(title = state.title.ifBlank { "Video" }, onBack = onBack)
+            videoSurface(Modifier.weight(1f).fillMaxWidth().padding(horizontal = ClaySpacing.Lg))
+            controls(Modifier)
+        }
     }
 }
 
@@ -156,6 +208,7 @@ private fun Controls(
     onSkipForward: () -> Unit,
     onSeek: (Long) -> Unit,
     onToggleFullscreen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // While the thumb is being dragged show the drag position, not the (still-playing) real one.
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
@@ -163,7 +216,7 @@ private fun Controls(
     val fraction = scrubFraction ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f)
     val shownPosition = scrubFraction?.let { (it * duration).toLong() } ?: state.positionMs
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = ClaySpacing.Lg, vertical = ClaySpacing.Md)) {
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = ClaySpacing.Lg, vertical = if (fullscreen) ClaySpacing.Sm else ClaySpacing.Md)) {
         Slider(
             value = fraction,
             onValueChange = { scrubFraction = it },

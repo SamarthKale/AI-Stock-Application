@@ -31,6 +31,24 @@ object LearnContent {
     val all: List<LearnItem> = listOf(
         // ---- Tutorials: crypto trading & how to use crypto -------------------------------------
         LearnItem(
+            id = "how_to_predict_crypto_markets",
+            title = "How to Predict the Crypto Markets",
+            subtitle = "A beginner's guide to reading and forecasting crypto prices",
+            type = LearnType.VIDEO,
+            category = LearnCategory.TUTORIAL,
+            durationLabel = "6:34",
+            rawRes = R.raw.how_to_predict_crypto_markets,
+        ),
+        LearnItem(
+            id = "crypto_video_two",
+            title = "Why Is Smart Money Buying Bitcoin?",
+            subtitle = "Why institutions are adopting Bitcoin",
+            type = LearnType.VIDEO,
+            category = LearnCategory.TUTORIAL,
+            durationLabel = "9:22",
+            rawRes = R.raw.crypto_video_two,
+        ),
+        LearnItem(
             id = "crypto_basics_pdf",
             title = "Crypto Basics",
             subtitle = "What crypto is, how to read the market and use a wallet safely",
@@ -43,10 +61,10 @@ object LearnContent {
         LearnItem(
             id = "app_tour_video",
             title = "App Tour",
-            subtitle = "A quick walkthrough of the app's screens",
+            subtitle = "A quick walkthrough of the redesigned app",
             type = LearnType.VIDEO,
             category = LearnCategory.DEMO,
-            durationLabel = "Video",
+            durationLabel = "0:34",
             rawRes = R.raw.demo_app_tour,
         ),
     )
