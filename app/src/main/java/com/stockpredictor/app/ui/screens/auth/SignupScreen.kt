@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stockpredictor.app.ui.components.ClayAppBar
+import com.stockpredictor.app.ui.components.BrandMark
 import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayTextField
 import com.stockpredictor.app.ui.theme.ClayColor
@@ -63,6 +65,8 @@ fun SignupScreen(
                 .padding(horizontal = ClaySpacing.Lg)
                 .verticalScroll(rememberScrollState()),
         ) {
+            BrandMark(size = 64.dp)
+            Spacer(modifier = Modifier.height(ClaySpacing.Md))
             Text("Join AI Crypto Predictor", style = MaterialTheme.typography.titleLarge, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(ClaySpacing.Xl))
             ClayTextField(value = formState.fullName, onValueChange = viewModel::onFullNameChange, label = "Full name", errorText = formState.fullNameError)

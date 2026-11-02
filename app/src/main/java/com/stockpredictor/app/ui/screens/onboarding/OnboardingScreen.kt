@@ -2,6 +2,7 @@ package com.stockpredictor.app.ui.screens.onboarding
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.AutoGraph
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
+import com.stockpredictor.app.ui.components.BrandMark
+import com.stockpredictor.app.ui.theme.ClayElevation
+import com.stockpredictor.app.ui.theme.ClayShapes
+import com.stockpredictor.app.ui.theme.clayShadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,6 +67,20 @@ fun OnboardingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                // Hero visual: a warm gradient tile with a slide-specific icon and the brand mark.
+                val icon = listOf(Icons.Filled.Public, Icons.Filled.AutoGraph, Icons.Filled.AccountBalanceWallet)[page % 3]
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .clayShadow(shape = ClayShapes.Hero, elevation = ClayElevation.Default)
+                        .background(Brush.verticalGradient(listOf(ClayColor.AccentGold, ClayColor.AccentPrimary)), ClayShapes.Hero),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = ClayColor.OnDark, modifier = Modifier.size(112.dp))
+                    BrandMark(modifier = Modifier.align(Alignment.TopStart).padding(ClaySpacing.Lg), size = 48.dp)
+                }
+                Spacer(modifier = Modifier.height(ClaySpacing.Xl))
                 Text(
                     text = slide.title,
                     style = MaterialTheme.typography.headlineSmall,
@@ -62,7 +88,7 @@ fun OnboardingScreen(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(ClaySpacing.Md))
-                Text(text = slide.body, color = ClayColor.TextSecondary)
+                Text(text = slide.body, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodyLarge)
             }
         }
         Row(

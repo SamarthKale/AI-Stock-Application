@@ -17,8 +17,8 @@ private val defaultSlides = listOf(
         body = "See confidence-scored price direction predictions, powered by machine learning.",
     ),
     OnboardingSlide(
-        title = "Your portfolio, always in view",
-        body = "Track holdings, gains, and losses at a glance with a calm, clutter-free layout.",
+        title = "Your wallet, always in view",
+        body = "Connect MetaMask to see the real balances and value of your wallet - read-only, never your keys.",
     ),
 )
 
