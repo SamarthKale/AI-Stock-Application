@@ -21,10 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stockpredictor.app.ui.components.BrandMark
 import com.stockpredictor.app.ui.components.ClayButton
 import com.stockpredictor.app.ui.components.ClayButtonVariant
 import com.stockpredictor.app.ui.components.ClayTextField
@@ -61,6 +63,8 @@ fun LoginScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
     ) {
+        BrandMark(size = 72.dp)
+        Spacer(modifier = Modifier.height(ClaySpacing.Lg))
         Text("Welcome back", style = MaterialTheme.typography.headlineSmall, color = ClayColor.TextPrimary, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(ClaySpacing.Xs))
         Text("Log in to continue", color = ClayColor.TextSecondary)

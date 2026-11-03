@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.stockpredictor.app.data.local.dao.SettingsDao
 import com.stockpredictor.app.data.remote.firebase.FirebaseAuthRepository
 import com.stockpredictor.app.data.remote.firebase.FirestoreSyncRepository
+import com.stockpredictor.app.data.remote.wallet.WalletSessionManager
 import com.stockpredictor.app.debug.DebugStateController
 import com.stockpredictor.app.debug.DebugUiMode
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -106,6 +107,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             syncRepository.stopListening()
             syncRepository.clearLocalCache()
+            WalletSessionManager.disconnect(getApplication()) // the next account must not inherit this wallet
             authRepository.signOut()
             _logoutEvent.emit(Unit)
         }

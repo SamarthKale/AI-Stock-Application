@@ -35,6 +35,8 @@ fun CoinListTile(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            CoinAvatar(imageUrl = coin.image, symbol = coin.symbol)
+            Spacer(modifier = Modifier.width(ClaySpacing.Md))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = coin.symbol, color = ClayColor.TextPrimary, style = MaterialTheme.typography.titleMedium)
                 Text(text = coin.name, color = ClayColor.TextSecondary, style = MaterialTheme.typography.bodySmall)

@@ -139,20 +139,31 @@ than assuming a stock-focused repo transfers cleanly — crypto's 24/7,
 no-market-holiday trading pattern differs from equities in ways that can
 affect feature engineering (e.g. no weekend gaps to handle specially).
 
-## Design System — Claymorphism (White Minimalist)
+## Design System — Warm Minimalist (v2; formerly Claymorphism / White Minimalist)
+
+> **v2 (branch `feature/v2-redesign`)** re-skinned the app: warm beige surfaces, deep-brown primary,
+> gold call-to-action, Manrope typography, large photo-style hero cards, a floating pill bottom nav
+> and a slide-out drawer. Token *names* in `ClayColor`/`ClayShapes` were kept so every screen
+> inherited the new look; only the values changed. The table below is the **current** palette. The
+> older "claymorphism" wording further down (dual shadow, 20–28dp radius, no light-on-dark) is
+> superseded where it conflicts: radii are now 22/28/32dp (+36dp `Hero`), shadows are a softer warm
+> drop shadow, and light-on-dark text is allowed on the brown hero cards/drawer via `OnDark`.
 
 Light, minimalist claymorphism — soft, puffy, matte "clay" surfaces on a
 white/off-white base.
 
 | Token | Hex | Suggested use |
 |---|---|---|
-| `bg` | `#F4F3F1` | App background base (warm off-white) |
-| `clay-base` | `#FFFFFF` | Card/surface fill |
-| `accent-primary` | `#6C63FF` (placeholder — confirm brand accent) | Primary buttons, active states, links |
-| `accent-mint` | `#4CAF8C` | Gains / positive indicators |
-| `accent-coral` | `#E2685A` | Losses / negative indicators |
-| `text-primary` | `#2B2B2E` | Primary text |
-| `text-secondary` | `#8A8A8E` | Secondary/labels |
+| `bg` | `#EFEAE4` | App background base (warm beige) |
+| `clay-base` | `#FBF8F5` | Card/surface fill |
+| `accent-primary` | `#8B6B55` | Primary buttons, active nav pill, drawer panel |
+| `accent-gold` | `#C08A3E` | Call-to-action circles/pills, office map pins, seek/play controls |
+| `sand` | `#E5DDD3` | Chips, avatars' fallback, inactive tracks |
+| `on-dark` | `#FFFFFF` | Text/icons on brown or gradient hero surfaces |
+| `accent-mint` | `#4E9F7E` | Gains / positive indicators |
+| `accent-coral` | `#D2685A` | Losses / negative indicators |
+| `text-primary` | `#2A2420` | Primary text |
+| `text-secondary` | `#9A8F86` | Secondary/labels |
 
 Claymorphism rules:
 - Flat `bg` background, no gradients.
@@ -1901,6 +1912,54 @@ documented tradeoffs as it is new work.
   user actually decides at submission time — keep `docker-compose.yml`,
   both Dockerfiles, and Android's `BACKEND_BASE_URL` build-config seam
   host-agnostic in the meantime, per the STATUS block above.
+
+---
+
+## Phase 7 — v2 Redesign, Offices Map, Learn, Wallet (branch `feature/v2-redesign`)
+
+**STATUS: COMPLETE on the branch; not merged into `main`.** Built after Phase 6, on top of it, without
+removing any existing feature.
+
+- **16 KB page-size fix.** `org.tensorflow:tensorflow-lite:2.17.0` shipped `libtensorflowlite_jni.so`
+  with 4 KB LOAD segments (the "app isn't 16 KB compatible" dialog). Replaced with **LiteRT 1.4.2**
+  (`com.google.ai.edge.litert:litert`) — same `org.tensorflow.lite.Interpreter` API, so
+  `OnDeviceMomentumClassifier` is unchanged. `scripts/check_16kb.py <apk>` verifies ELF + zip
+  alignment of every native lib; run it after **any** dependency change (it covers SQLCipher from
+  Reown, MapLibre, etc.). Debug and signed release both PASS.
+- **Design v2.** New tokens/typography (`ui/theme/*`, Manrope variable font in `res/font/`), new
+  components (`HeroImageCard`, `AvatarRow`, `SectionHeader`, `CoinAvatar` via Coil, `AppDrawerContent`,
+  `BrandMark`), pill `ClayBottomNav` (Settings tab is now **Profile**), adaptive launcher icon +
+  splash, Home redesign with a drawer. The Settings screen's debug-only "Crash Reporting" and
+  "Preview UI States" sections were removed (`DebugStateController` still exists and stays at NONE).
+  Fixed a latent Home crash (duplicate movers key).
+- **Offices & Map** (`ExchangeMapScreen`, route still `exchange_map`). Four Maharashtra offices in
+  `data/OfficeData.kt` (**placeholder addresses/coordinates — edit that one file**; `phone` is null so
+  no Call button until filled). Map is always shown (offices are static); exchange data loads in the
+  background. Filters Offices/Exchanges/All; "Locate me" is the same one-shot foreground GPS fix but
+  now always resolves to the nearest *office* (and nearest exchange when loaded). Directions uses a
+  `geo:` intent with a browser fallback.
+- **Learn** (Profile → Tutorials / Demo). Bundled content in `data/learn/LearnContent.kt`: MP4s in
+  `res/raw/` (Media3 ExoPlayer, custom play/pause, ±10s, seek, fullscreen, auto-pause), PDFs in
+  `assets/learn/` (platform `PdfRenderer`, lazy pages, pinch zoom). Ships a sample PDF and an app-tour
+  MP4 recorded from the emulator; replace with the real files and add one `LearnItem` row each.
+- **Wallet / Portfolio.** The Portfolio tab shows the user's *real* on-chain wallet (native coin +
+  curated ERC-20s on Ethereum, Polygon, BNB Chain, Arbitrum, Base) via free public RPC
+  (publicnode.com, one batched JSON-RPC call per chain) priced through the existing cached
+  `CoinRepository`. "Connect MetaMask" uses **Reown (WalletConnect) AppKit 1.6.12** and needs a free
+  `REOWN_PROJECT_ID` in `local.properties`; "Enter a wallet address" (watch-only) works with no
+  config. Read-only: only a public address is ever seen. Token contract addresses/decimals in
+  `TokenRegistry.kt` were verified against the live chains — re-verify any new entry (a wrong
+  address silently reads as zero). Logout/Disconnect clear the wallet.
+- **Dependency pins and why** (all in `gradle/libs.versions.toml`): Coil **3.3.0** and Reown **1.6.12**
+  are the last releases built against Kotlin 2.2 (newer ones pull Kotlin 2.4's stdlib, which this
+  project's 2.2.10 compiler cannot read). JitPack is added to `settings.gradle.kts` but restricted to
+  the exact groups Reown needs. Reown's `WalletConnectV2.db` is excluded from backups
+  (`data_extraction_rules.xml`, `backup_rules.xml`).
+- **Privacy policy** updated for the wallet, profile photo and optional one-shot location (the old
+  Maps text wrongly said the map never accesses location).
+- **Not verified on a real device:** the full MetaMask handshake (needs the MetaMask app on a phone —
+  the emulator verified the connect sheet, MetaMask listed first, and the read-only balance path with
+  a public address); physical-device GPS.
 
 ---
 
